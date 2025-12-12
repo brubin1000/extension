@@ -24,6 +24,7 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
+._*
 
 # Logs
 *.log
@@ -36,10 +37,11 @@ tmp/
 temp/
 *.tmp
 
-# API keys (backup - should not be in git)
+# API keys and secrets (should not be in git)
 *-key.json
 credentials.json
 secrets.json
+config/secrets.js
 
 # Chrome extension specific
 *.crx

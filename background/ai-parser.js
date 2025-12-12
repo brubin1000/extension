@@ -4,10 +4,11 @@
  */
 
 import { GEMINI_API_URL } from '../config/constants.js';
+import { GEMINI_API_KEY as SECRET_KEY } from '../config/secrets.js';
 import { debug, error as logError, warn, info } from '../utils/logger.js';
 
-// Fallback Gemini API key (user provided)
-const FALLBACK_API_KEY = 'AIzaSyDZad3ahOoMpiKWzOgpKIx9hMQQZwnEQIw';
+// API key from secrets file (gitignored)
+const FALLBACK_API_KEY = SECRET_KEY || '';
 
 /**
  * Get Gemini API key from storage or fallback
