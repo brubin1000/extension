@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Email to Calendar AI Agent",
+  "version": "1.0.0",
+  "description": "Automatically extracts logistics schedules from emails and adds them to Google Calendar",
+  
+  "permissions": [
+    "identity",
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  
+  "host_permissions": [
+    "https://www.googleapis.com/*",
+    "https://gmail.googleapis.com/*",
+    "https://api.openai.com/*",
+    "https://*.mongodb.com/*",
+    "https://*.mongodb-realm.com/*"
+  ],
+  
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  
+  "oauth2": {
+    "client_id": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/calendar.events",
+      "openid",
+      "email",
+      "profile"
+    ]
+  },
+  
+  "action": {
+    "default_title": "Email Calendar Agent (Running in Background)"
+  },
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
+
