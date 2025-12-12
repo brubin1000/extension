@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <div class="app">
+    <main class="main-content">
+      
+      <!-- OVERVIEW SCREEN -->
+      <section class="screen active" id="screen-overview">
+        <header class="page-header">
+          <div class="header-content">
+            <h1 class="page-title">Welcome back!</h1>
+            <p class="page-subtitle">You have <span id="upcoming-count">0</span> upcoming events</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary btn-sm" id="btn-new-event">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              New
+            </button>
+          </div>
+        </header>
+        
+        <!-- Info Banner -->
+        <div class="info-banner">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <p>Use the <strong>ATMS button</strong> in Gmail to add events from emails</p>
+        </div>
+        
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div class="filter-scroll">
+            <button class="filter-btn active" data-filter="all">All <span class="filter-count" id="filter-all-count">0</span></button>
+            <button class="filter-btn" data-filter="upcoming">Upcoming</button>
+            <button class="filter-btn" data-filter="past">Past</button>
+          </div>
+        </div>
+        
+        <!-- Events List -->
+        <div class="events-list" id="events-list">
+          <div class="empty-state" id="events-empty">
+            <div class="empty-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <h3>No events yet</h3>
+            <p>Click the ATMS button in Gmail to create your first event</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- CONTACTS SCREEN -->
+      <section class="screen" id="screen-contacts">
+        <header class="page-header">
+          <div class="header-content">
+            <h1 class="page-title">Contacts</h1>
+            <p class="page-subtitle">Your artists and contacts</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary btn-sm" id="btn-add-contact">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add
+            </button>
+          </div>
+        </header>
+        
+        <div class="search-bar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" class="search-input" id="contacts-search" placeholder="Search contacts...">
+        </div>
+        
+        <div class="contacts-grid" id="contacts-grid">
+          <div class="empty-state" id="contacts-empty">
+            <div class="empty-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <h3>No contacts yet</h3>
+            <p>Add contacts from emails or manually</p>
+          </div>
+        </div>
+      </section>
+      
+      <!-- TEAM SCREEN -->
+      <section class="screen" id="screen-team">
+        <header class="page-header">
+          <div class="header-content">
+            <h1 class="page-title">Team</h1>
+            <p class="page-subtitle">Workspace members</p>
+          </div>
+        </header>
+        
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+            </svg>
+            <span>Team Members</span>
+          </div>
+          <div class="team-list" id="team-list"></div>
+        </div>
+      </section>
+      
+      <!-- SETTINGS SCREEN -->
+      <section class="screen" id="screen-settings">
+        <header class="page-header">
+          <div class="header-content">
+            <h1 class="page-title">Settings</h1>
+            <p class="page-subtitle">Preferences</p>
+          </div>
+        </header>
+        
+        <!-- Profile Card -->
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span>Profile</span>
+          </div>
+          <div class="settings-section">
+            <div class="profile-avatar-row">
+              <div class="avatar avatar-lg" id="settings-avatar">U</div>
+              <div class="profile-info">
+                <div class="profile-name" id="profile-name">User</div>
+                <div class="profile-email" id="profile-email">user@example.com</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- About Card -->
+        <div class="card">
+          <div class="card-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <span>About</span>
+          </div>
+          <div class="settings-section">
+            <p class="about-text">ATMS - Artist Tour Management System</p>
+            <p class="version-text">Version 1.0.0</p>
+          </div>
+        </div>
+      </section>
+      
+    </main>
+    
+    <!-- Bottom Tab Bar - 4 tabs only -->
+    <nav class="tab-bar">
+      <button class="tab-item active" data-screen="overview">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        <span>Overview</span>
+      </button>
+      <button class="tab-item" data-screen="contacts">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Contacts</span>
+      </button>
+      <button class="tab-item" data-screen="team">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <circle cx="19" cy="7" r="3"/>
+          <path d="M22 21v-1a3 3 0 0 0-2-2.83"/>
+        </svg>
+        <span>Team</span>
+      </button>
+      <button class="tab-item" data-screen="settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+    
+    <!-- Drawers -->
+    <div class="drawer-backdrop hidden" id="drawer-backdrop"></div>
+    
+    <!-- New Event Drawer -->
+    <div class="drawer hidden" id="drawer-new-event">
+      <div class="drawer-handle"></div>
+      <div class="drawer-header">
+        <button class="btn-back" id="back-new-event">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <h2>New Event</h2>
+      </div>
+      <div class="drawer-content">
+        <div class="form-group">
+          <label class="form-label">Event Name</label>
+          <input type="text" class="form-input" id="new-event-name" placeholder="Enter event name">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-input" id="new-event-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time</label>
+            <input type="time" class="form-input" id="new-event-time">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input type="text" class="form-input" id="new-event-venue" placeholder="Venue, city">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary full-width" id="btn-create-event">Create Event</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add Contact Drawer -->
+    <div class="drawer hidden" id="drawer-add-contact">
+      <div class="drawer-handle"></div>
+      <div class="drawer-header">
+        <button class="btn-back" id="back-add-contact">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <h2>Add Contact</h2>
+      </div>
+      <div class="drawer-content">
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input type="text" class="form-input" id="new-contact-name" placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="new-contact-email" placeholder="email@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input type="tel" class="form-input" id="new-contact-phone" placeholder="+1 (555) 000-0000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <input type="text" class="form-input" id="new-contact-role" placeholder="e.g., Manager, Agent">
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">This is an artist</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="new-contact-is-artist">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary full-width" id="btn-save-contact">Save Contact</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Event Detail Drawer -->
+    <div class="drawer hidden" id="drawer-event-detail">
+      <div class="drawer-handle"></div>
+      <div class="drawer-header">
+        <button class="btn-back" id="back-event-detail">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <h2>Event Details</h2>
+      </div>
+      <div class="drawer-content">
+        <div class="event-detail-header">
+          <div class="event-detail-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <h3 class="event-detail-title" id="event-detail-title">Event Name</h3>
+          <span class="badge status-confirmed" id="event-detail-status">confirmed</span>
+        </div>
+        
+        <div class="event-detail-info">
+          <div class="event-detail-row">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <div>
+              <div class="event-detail-label">Date</div>
+              <div class="event-detail-value" id="event-detail-date">-</div>
+            </div>
+          </div>
+          
+          <div class="event-detail-row">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <div>
+              <div class="event-detail-label">Time</div>
+              <div class="event-detail-value" id="event-detail-time">-</div>
+            </div>
+          </div>
+          
+          <div class="event-detail-row">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            <div>
+              <div class="event-detail-label">Location</div>
+              <div class="event-detail-value" id="event-detail-location">-</div>
+            </div>
+          </div>
+          
+          <div class="event-detail-row" id="event-detail-desc-row" style="display: none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="17" y1="10" x2="3" y2="10"/>
+              <line x1="21" y1="6" x2="3" y2="6"/>
+              <line x1="21" y1="14" x2="3" y2="14"/>
+              <line x1="17" y1="18" x2="3" y2="18"/>
+            </svg>
+            <div>
+              <div class="event-detail-label">Description</div>
+              <div class="event-detail-value" id="event-detail-description">-</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-actions" style="margin-top: 24px;">
+          <button class="btn btn-primary full-width" id="btn-view-calendar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            View in Google Calendar
+          </button>
+          <button class="btn btn-secondary full-width" id="btn-delete-event" style="margin-top: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Delete Event
+          </button>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  
+  <script src="panel.js"></script>
+</body>
+</html>

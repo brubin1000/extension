@@ -1,34 +1,50 @@
 {
   "manifest_version": 3,
-  "name": "Email to Calendar AI Agent",
+  "name": "ATMS",
   "version": "1.0.0",
-  "description": "Automatically extracts logistics schedules from emails and adds them to Google Calendar",
+  "description": "Artist Tour Management System - AI-powered email to calendar event creation",
   
   "permissions": [
     "identity",
     "storage",
     "alarms",
-    "notifications"
+    "notifications",
+    "activeTab",
+    "sidePanel"
   ],
   
   "host_permissions": [
     "https://www.googleapis.com/*",
     "https://gmail.googleapis.com/*",
-    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://mail.google.com/*",
     "https://*.mongodb.com/*",
     "https://*.mongodb-realm.com/*"
   ],
   
   "background": {
-    "service_worker": "background/service-worker.js",
+    "service_worker": "dist/service-worker.js",
     "type": "module"
   },
   
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content/gmail-inject.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  
+  "side_panel": {
+    "default_path": "panel/panel.html"
+  },
+  
   "oauth2": {
-    "client_id": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+    "client_id": "556157070508-f73pq99a2kc8vqeetrrgcvbe77se7tn6.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/gmail.readonly",
       "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/calendar.readonly",
       "openid",
       "email",
       "profile"
@@ -36,13 +52,6 @@
   },
   
   "action": {
-    "default_title": "Email Calendar Agent (Running in Background)"
-  },
-  
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "default_title": "ATMS"
   }
 }
-

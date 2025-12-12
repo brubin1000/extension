@@ -15,12 +15,10 @@ export const MONGODB_COLLECTION_NAME = 'events';
 // ============= API ENDPOINTS =============
 export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 export const CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
-export const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// ============= OPENAI CONFIGURATION =============
-export const OPENAI_MODEL = 'gpt-4o-mini'; // Cost-effective model for parsing
-export const OPENAI_TEMPERATURE = 0.1; // Low temperature for consistent extraction
-export const OPENAI_MAX_TOKENS = 500;
+// ============= GEMINI CONFIGURATION =============
+export const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+export const GEMINI_MODEL = 'gemini-2.0-flash';
 
 // ============= POLLING CONFIGURATION =============
 export const POLL_INTERVAL_MINUTES = 5; // How often to check for new emails
@@ -30,10 +28,11 @@ export const MAX_EMAILS_PER_POLL = 20; // Maximum emails to process in one poll
 // ============= STORAGE KEYS =============
 export const STORAGE_KEYS = {
   PROCESSED_EMAILS: 'processedEmailIds',
-  OPENAI_API_KEY: 'openaiApiKey',
+  GEMINI_API_KEY: 'geminiApiKey',
   REALM_USER_ID: 'realmUserId',
   LAST_POLL_TIME: 'lastPollTime',
-  EXTENSION_ENABLED: 'extensionEnabled'
+  EXTENSION_ENABLED: 'extensionEnabled',
+  CURRENT_EMAIL_DATA: 'currentEmailData'
 };
 
 // ============= ALARM NAMES =============

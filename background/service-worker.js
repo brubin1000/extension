@@ -352,18 +352,21 @@ chrome.action.onClicked.addListener(async () => {
 });
 
 /**
- * Handle messages from popup or content scripts (future use)
+ * Handle messages from popup or content scripts
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const action = message.type || message.action;
+  
   (async () => {
     try {
-      switch (message.action) {
+      switch (action) {
         case 'processEmails':
           await processNewEmails();
           sendResponse({ success: true });
           break;
           
         case 'getStatus':
+        case 'GET_STATUS':
           const setupComplete = await isSetupComplete();
           const stats = await getStats();
           sendResponse({
@@ -376,6 +379,153 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'toggleEnabled':
           await toggleEnabled();
           sendResponse({ success: true });
+          break;
+        
+        case 'EXTRACT_EVENT':
+          // Extract event from email using AI
+          try {
+            info('Extracting event from email...');
+            const eventDetails = await extractScheduleFromEmail(message.email);
+            sendResponse({ success: true, eventDetails });
+          } catch (extractErr) {
+            logError('Extract event error:', extractErr);
+            sendResponse({ success: false, error: extractErr.message });
+          }
+          break;
+        
+        case 'CREATE_EVENT':
+          // Create calendar event
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              throw new Error('Not authenticated');
+            }
+            
+            const { eventData } = message;
+            
+            // Parse date and time
+            let startDateTime, endDateTime;
+            const dateStr = eventData.date || new Date().toISOString().split('T')[0];
+            const timeStr = eventData.time || '10:00';
+            
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            
+            startDateTime = new Date(year, month - 1, day, hours, minutes, 0);
+            endDateTime = new Date(startDateTime.getTime() + (eventData.duration || 60) * 60000);
+            
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            
+            const calendarEvent = {
+              summary: eventData.title || 'New Event',
+              description: eventData.description || '',
+              location: eventData.location || undefined,
+              start: {
+                dateTime: startDateTime.toISOString(),
+                timeZone: timezone
+              },
+              end: {
+                dateTime: endDateTime.toISOString(),
+                timeZone: timezone
+              },
+              attendees: eventData.attendees?.map(email => ({ email })) || []
+            };
+            
+            info('Creating calendar event:', calendarEvent.summary);
+            
+            const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${auth.googleToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(calendarEvent)
+            });
+            
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.error?.message || `Calendar API error: ${response.status}`);
+            }
+            
+            const createdEvent = await response.json();
+            info('Event created:', createdEvent.id);
+            
+            sendResponse({ success: true, eventId: createdEvent.id });
+          } catch (createErr) {
+            logError('Create event error:', createErr);
+            sendResponse({ success: false, error: createErr.message });
+          }
+          break;
+        
+        case 'GET_UPCOMING_EVENTS':
+          // Get upcoming calendar events
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              throw new Error('Not authenticated');
+            }
+            
+            const now = new Date();
+            const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+            
+            const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now.toISOString()}&timeMax=${thirtyDays.toISOString()}&maxResults=20&orderBy=startTime&singleEvents=true`;
+            
+            const response = await fetch(url, {
+              headers: { 'Authorization': `Bearer ${auth.googleToken}` }
+            });
+            
+            if (!response.ok) {
+              throw new Error(`Calendar API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const events = (data.items || []).map(e => ({
+              id: e.id,
+              title: e.summary || 'Untitled',
+              start: e.start?.dateTime || e.start?.date,
+              location: e.location
+            }));
+            
+            sendResponse({ success: true, events });
+          } catch (eventsErr) {
+            logError('Get events error:', eventsErr);
+            sendResponse({ success: false, error: eventsErr.message, events: [] });
+          }
+          break;
+        
+        case 'GET_USER_PROFILE':
+          // Get user profile
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated' });
+              break;
+            }
+            
+            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+              headers: { 'Authorization': `Bearer ${auth.googleToken}` }
+            });
+            
+            if (response.ok) {
+              const profile = await response.json();
+              sendResponse({ success: true, profile });
+            } else {
+              sendResponse({ success: false, error: 'Failed to get profile' });
+            }
+          } catch (profileErr) {
+            logError('Get profile error:', profileErr);
+            sendResponse({ success: false, error: profileErr.message });
+          }
+          break;
+        
+        case 'AUTHENTICATE':
+          // Trigger interactive authentication
+          try {
+            const result = await authenticate(true);
+            sendResponse(result);
+          } catch (authErr) {
+            sendResponse({ success: false, error: authErr.message });
+          }
           break;
           
         default:

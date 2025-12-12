@@ -12,15 +12,22 @@ let realmUser = null;
 let googleAccessToken = null;
 
 /**
- * Initialize the Realm app
- * @returns {Realm.App} Realm app instance
+ * Check if Realm is configured
+ */
+function isRealmConfigured() {
+  return MONGODB_REALM_APP_ID && MONGODB_REALM_APP_ID !== 'YOUR_MONGODB_REALM_APP_ID';
+}
+
+/**
+ * Initialize the Realm app (optional - returns null if not configured)
+ * @returns {Realm.App|null} Realm app instance or null
  */
 function initRealmApp() {
+  if (!isRealmConfigured()) {
+    return null;
+  }
+  
   if (!realmApp) {
-    if (MONGODB_REALM_APP_ID === 'YOUR_MONGODB_REALM_APP_ID') {
-      throw new Error('MongoDB Realm App ID not configured. Please update config/constants.js');
-    }
-    
     realmApp = new Realm.App({ id: MONGODB_REALM_APP_ID });
     logAuth('Realm app initialized');
   }
@@ -106,12 +113,16 @@ export async function getGoogleUserProfile(token) {
 /**
  * Authenticate with MongoDB Realm using Google token
  * @param {string} googleToken - Google OAuth access token
- * @returns {Promise<Realm.User>} Realm user
+ * @returns {Promise<Realm.User|null>} Realm user or null if not configured
  */
 export async function authenticateWithRealm(googleToken) {
+  const app = initRealmApp();
+  if (!app) {
+    warn('Realm not configured - skipping Realm auth');
+    return null;
+  }
+  
   try {
-    const app = initRealmApp();
-    
     // Create Google credentials
     const credentials = Realm.Credentials.google({ idToken: googleToken });
     
@@ -137,13 +148,17 @@ export async function authenticateWithRealm(googleToken) {
  * @returns {Realm.User|null} Current user or null
  */
 export function getCurrentRealmUser() {
+  if (!isRealmConfigured()) {
+    return null;
+  }
+  
   if (realmUser && realmUser.isLoggedIn) {
     return realmUser;
   }
   
   // Try to get from app
   const app = initRealmApp();
-  if (app.currentUser && app.currentUser.isLoggedIn) {
+  if (app && app.currentUser && app.currentUser.isLoggedIn) {
     realmUser = app.currentUser;
     return realmUser;
   }
@@ -152,34 +167,29 @@ export function getCurrentRealmUser() {
 }
 
 /**
- * Check if user is authenticated with both Google and Realm
- * @returns {Promise<boolean>} True if authenticated
+ * Check if user is authenticated (Google only - Realm is optional)
+ * @returns {Promise<boolean>} True if authenticated with Google
  */
 export async function isAuthenticated() {
-  // Check Google token
+  // Check Google token - this is required
   const googleToken = await getGoogleToken(false);
   if (!googleToken) {
     return false;
   }
   
-  // Check Realm user
-  const realmUserObj = getCurrentRealmUser();
-  if (!realmUserObj) {
-    return false;
-  }
-  
+  // Realm is optional - don't require it
   return true;
 }
 
 /**
  * Complete authentication flow
- * This handles the full authentication process with both Google and Realm
+ * Google is required, Realm is optional
  * @param {boolean} interactive - Whether to show OAuth UI
  * @returns {Promise<Object>} Authentication result
  */
 export async function authenticate(interactive = false) {
   try {
-    // Step 1: Get Google OAuth token
+    // Step 1: Get Google OAuth token (required)
     const googleToken = await getGoogleToken(interactive);
     
     if (!googleToken) {
@@ -192,13 +202,22 @@ export async function authenticate(interactive = false) {
     // Step 2: Get user profile
     const profile = await getGoogleUserProfile(googleToken);
     
-    // Step 3: Authenticate with MongoDB Realm
-    const user = await authenticateWithRealm(googleToken);
+    info('Google authentication complete', { email: profile.email });
     
-    info('Authentication complete', {
-      email: profile.email,
-      userId: user.id
-    });
+    // Step 3: Try Realm authentication (optional)
+    let user = null;
+    if (isRealmConfigured()) {
+      try {
+        user = await authenticateWithRealm(googleToken);
+        if (user) {
+          info('Realm authentication complete', { userId: user.id });
+        }
+      } catch (realmErr) {
+        warn('Realm auth failed (continuing without cloud sync)', realmErr.message);
+      }
+    } else {
+      warn('Realm not configured - skipping. Extension will work without cloud sync.');
+    }
     
     return {
       success: true,
@@ -249,8 +268,8 @@ export async function logout() {
 export async function ensureAuthenticated() {
   const authenticated = await isAuthenticated();
   
-  if (authenticated) {
-    return { success: true, googleToken, realmUser };
+  if (authenticated && googleAccessToken) {
+    return { success: true, googleToken: googleAccessToken, realmUser: getCurrentRealmUser() };
   }
   
   // Try to re-authenticate without interaction first

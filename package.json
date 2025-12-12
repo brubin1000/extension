@@ -1,29 +1,19 @@
 {
-  "name": "email-calendar-agent",
+  "name": "atms-extension",
   "version": "1.0.0",
-  "description": "AI-powered Chrome extension that automatically extracts logistics schedules from emails and adds them to Google Calendar",
+  "description": "ATMS - Artist Tour Management System Chrome Extension",
   "type": "module",
   "scripts": {
+    "build": "esbuild background/service-worker.js --bundle --outfile=dist/service-worker.js --format=esm --target=es2020",
+    "watch": "esbuild background/service-worker.js --bundle --outfile=dist/service-worker.js --format=esm --target=es2020 --watch",
     "test": "echo \"No tests yet\" && exit 0"
   },
   "dependencies": {
     "realm-web": "^2.0.1"
   },
-  "devDependencies": {},
-  "author": "Your Name",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/email-calendar-agent.git"
+  "devDependencies": {
+    "esbuild": "^0.20.0"
   },
-  "keywords": [
-    "chrome-extension",
-    "gmail",
-    "calendar",
-    "ai",
-    "automation",
-    "logistics",
-    "mongodb"
-  ]
+  "author": "ATMS",
+  "license": "MIT"
 }
-
