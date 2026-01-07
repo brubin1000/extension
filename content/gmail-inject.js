@@ -2083,14 +2083,22 @@ async function handleCreate() {
     const additionalFields = collectAdditionalFields();
     Object.assign(eventData, additionalFields);
 
-    // Include original extracted data for reference
+    // Include ALL extracted data for calendar description
     if (eventState.eventDetails) {
       eventData.extractedData = {
-        set_overview: eventState.eventDetails.set_overview,
+        // New schema fields
+        venue: eventState.eventDetails.venue,
+        dates: eventState.eventDetails.dates,
+        organizer: eventState.eventDetails.organizer,
+        stages: eventState.eventDetails.stages,
+        contacts: eventState.eventDetails.contacts,
+        schedule_items: eventState.eventDetails.schedule_items,
         artist_information: eventState.eventDetails.artist_information,
-        riders_and_media: eventState.eventDetails.riders_and_media,
-        logistics_and_notes: eventState.eventDetails.logistics_and_notes,
-        contacts_list: eventState.eventDetails.contacts_list
+        event_links: eventState.eventDetails.event_links,
+        important_deadlines: eventState.eventDetails.important_deadlines,
+        logistics_notes: eventState.eventDetails.logistics_notes,
+        // Status
+        status: eventState.eventDetails.status
       };
     }
 

@@ -422,6 +422,141 @@ function showEventCreatedNotification(title, startDateTime) {
 }
 
 /**
+ * Build comprehensive event description from extracted data
+ * @param {Object} eventData - Event data with all extracted fields
+ * @returns {string} Formatted description for calendar event
+ */
+function buildEventDescription(eventData) {
+  const sections = [];
+
+  // User-provided description (if any)
+  if (eventData.description && eventData.description.trim()) {
+    sections.push(eventData.description.trim());
+    sections.push('\n' + '─'.repeat(50) + '\n');
+  }
+
+  // SET INFORMATION (Primary performance details)
+  if (eventData.extractedData?.stages && eventData.extractedData.stages.length > 0) {
+    const stage = eventData.extractedData.stages[0];
+    if (stage.sets && stage.sets.length > 0) {
+      const set = stage.sets[0];
+      sections.push('🎵 SET INFORMATION');
+      if (stage.stage_name) sections.push(`Stage: ${stage.stage_name}`);
+      if (set.set_date) sections.push(`Date: ${set.set_date}`);
+      if (set.start_time && set.end_time) {
+        sections.push(`Time: ${set.start_time} - ${set.end_time}`);
+      } else if (set.start_time) {
+        sections.push(`Start Time: ${set.start_time}`);
+      }
+      if (set.soundcheck_time) sections.push(`Soundcheck: ${set.soundcheck_time}`);
+      if (set.crew_list) sections.push(`Crew: ${set.crew_list}`);
+      if (set.guest_list_spots) sections.push(`Guest List: ${set.guest_list_spots} spots`);
+      if (set.technical_notes) sections.push(`Tech Notes: ${set.technical_notes}`);
+      if (set.hospitality_notes) sections.push(`Hospitality: ${set.hospitality_notes}`);
+      sections.push('');
+    }
+  }
+
+  // VENUE INFORMATION
+  if (eventData.extractedData?.venue && hasContent(eventData.extractedData.venue)) {
+    const venue = eventData.extractedData.venue;
+    sections.push('📍 VENUE');
+    if (venue.venue_name) sections.push(`Name: ${venue.venue_name}`);
+    if (venue.venue_address) sections.push(`Address: ${venue.venue_address}`);
+    if (venue.city || venue.state) {
+      const location = [venue.city, venue.state].filter(Boolean).join(', ');
+      sections.push(`Location: ${location}`);
+    }
+    if (venue.country) sections.push(`Country: ${venue.country}`);
+    sections.push('');
+  }
+
+  // EVENT DATES & TIMEZONE
+  if (eventData.extractedData?.dates && hasContent(eventData.extractedData.dates)) {
+    const dates = eventData.extractedData.dates;
+    sections.push('📅 EVENT DATES');
+    if (dates.start_date) sections.push(`Start: ${dates.start_date}`);
+    if (dates.end_date) sections.push(`End: ${dates.end_date}`);
+    if (dates.timezone) sections.push(`Timezone: ${dates.timezone}`);
+    sections.push('');
+  }
+
+  // IMPORTANT DEADLINES
+  if (eventData.extractedData?.important_deadlines && eventData.extractedData.important_deadlines.length > 0) {
+    sections.push('⏰ IMPORTANT DEADLINES');
+    eventData.extractedData.important_deadlines.forEach(deadline => {
+      sections.push(`• ${deadline.date}: ${deadline.description}`);
+    });
+    sections.push('');
+  }
+
+  // CONTACTS
+  if (eventData.extractedData?.contacts && eventData.extractedData.contacts.length > 0) {
+    sections.push('👤 CONTACTS');
+    eventData.extractedData.contacts.forEach(contact => {
+      let contactLine = `• ${contact.name}`;
+      if (contact.role) contactLine += ` (${contact.role})`;
+      sections.push(contactLine);
+      if (contact.email) sections.push(`  Email: ${contact.email}`);
+      if (contact.phone) sections.push(`  Phone: ${contact.phone}`);
+      if (contact.company) sections.push(`  Company: ${contact.company}`);
+    });
+    sections.push('');
+  }
+
+  // EVENT LINKS
+  if (eventData.extractedData?.event_links && eventData.extractedData.event_links.length > 0) {
+    sections.push('🔗 EVENT LINKS');
+    eventData.extractedData.event_links.forEach(link => {
+      sections.push(`• ${link.description}: ${link.url}`);
+    });
+    sections.push('');
+  }
+
+  // LOGISTICS NOTES
+  if (eventData.extractedData?.logistics_notes && eventData.extractedData.logistics_notes.trim()) {
+    sections.push('📝 LOGISTICS NOTES');
+    sections.push(eventData.extractedData.logistics_notes.trim());
+    sections.push('');
+  }
+
+  // ARTIST INFORMATION
+  if (eventData.extractedData?.artist_information && hasContent(eventData.extractedData.artist_information)) {
+    const artist = eventData.extractedData.artist_information;
+    sections.push('🎤 ARTIST INFORMATION');
+    if (artist.artist_name) sections.push(`Artist: ${artist.artist_name}`);
+    if (artist.email) sections.push(`Email: ${artist.email}`);
+    if (artist.dos_contact_phone) sections.push(`Day-of-Show Phone: ${artist.dos_contact_phone}`);
+    if (artist.genre) sections.push(`Genre: ${artist.genre}`);
+    sections.push('');
+  }
+
+  // ORGANIZER
+  if (eventData.extractedData?.organizer && hasContent(eventData.extractedData.organizer)) {
+    const org = eventData.extractedData.organizer;
+    sections.push('🏢 ORGANIZER');
+    if (org.name) sections.push(`Name: ${org.name}`);
+    if (org.email) sections.push(`Email: ${org.email}`);
+    if (org.phone) sections.push(`Phone: ${org.phone}`);
+    sections.push('');
+  }
+
+  // Footer
+  sections.push('─'.repeat(50));
+  sections.push('✨ Created with ATMS Extension');
+
+  return sections.join('\n');
+}
+
+/**
+ * Check if an object has any meaningful content
+ */
+function hasContent(obj) {
+  if (!obj || typeof obj !== 'object') return false;
+  return Object.values(obj).some(val => val !== null && val !== undefined && val !== '');
+}
+
+/**
  * Handle extension icon click
  * Could show status or trigger manual sync
  */
@@ -834,9 +969,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               return `${y}-${m}-${d}`;
             };
 
+            // Build comprehensive description from all extracted data
+            const description = buildEventDescription(eventData);
+
             const calendarEvent = {
               summary: eventData.title || 'New Event',
-              description: eventData.description || '',
+              description: description,
               location: eventData.location || undefined,
               start: {
                 date: formatDateForAllDay(startDate)
