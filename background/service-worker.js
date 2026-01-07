@@ -819,30 +819,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             
             const { eventData } = message;
             
-            // Parse date and time
-            let startDateTime, endDateTime;
+            // Parse date for all-day event
             const dateStr = eventData.date || new Date().toISOString().split('T')[0];
-            const timeStr = eventData.time || '10:00';
-            
+
+            // Calculate end date (next day for all-day events)
             const [year, month, day] = dateStr.split('-').map(Number);
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            
-            startDateTime = new Date(year, month - 1, day, hours, minutes, 0);
-            endDateTime = new Date(startDateTime.getTime() + (eventData.duration || 60) * 60000);
-            
-            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            
+            const startDate = new Date(year, month - 1, day);
+            const endDate = new Date(year, month - 1, day + 1);
+
+            const formatDateForAllDay = (date) => {
+              const y = date.getFullYear();
+              const m = String(date.getMonth() + 1).padStart(2, '0');
+              const d = String(date.getDate()).padStart(2, '0');
+              return `${y}-${m}-${d}`;
+            };
+
             const calendarEvent = {
               summary: eventData.title || 'New Event',
               description: eventData.description || '',
               location: eventData.location || undefined,
               start: {
-                dateTime: startDateTime.toISOString(),
-                timeZone: timezone
+                date: formatDateForAllDay(startDate)
               },
               end: {
-                dateTime: endDateTime.toISOString(),
-                timeZone: timezone
+                date: formatDateForAllDay(endDate)
               },
               attendees: eventData.attendees?.map(email => ({ email })) || []
             };

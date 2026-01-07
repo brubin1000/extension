@@ -38,16 +38,21 @@ export async function extractScheduleFromEmail(email) {
 
 /**
  * Extract event from email content using Gemini AI
- * @param {Object} email - Email object with subject, body, sender, date
+ * @param {Object} email - Email object with subject, body, sender, date, links
  * @returns {Promise<Object>} Extracted event details
  */
 export async function extractEventFromEmail(email) {
   const apiKey = await getGeminiApiKey();
-  
+
   if (!apiKey) {
     throw new Error('Gemini API key not configured');
   }
-  
+
+  // Log the structured links we received
+  if (email.links && email.links.length > 0) {
+    info(`Received ${email.links.length} structured links from content script:`, email.links);
+  }
+
   const prompt = buildPrompt(email);
 
   try {
@@ -278,9 +283,9 @@ artist_information: Object (if mentioned) - {artist_name, dos_contact_phone, ema
 
 logistics_notes: String - Free-form text capturing ALL logistics: guest list/comp details, transportation, sound check, visuals submission, venue rules, etiquette, hospitality, parking, photo/video policy, merchandise, hotel info, production contacts, shuttle info - whatever is mentioned. Preserve all details.
 
-important_deadlines: Array - CRITICAL: Extract EVERY SINGLE deadline mentioned in the email: [{date: "YYYY-MM-DD", description: "what's due"}]. Look for date patterns like "April 22", "May 2", "May 8 -", etc. Convert month names to YYYY-MM-DD format using year ${currentYear}. Example: "May 2 - Advance Form" becomes {date: "${currentYear}-05-02", description: "Advance Form & Crew List"}.
+important_deadlines: Array - CRITICAL: Extract EVERY SINGLE deadline mentioned in the email: [{date: "YYYY-MM-DD", description: "what's due"}]. Look for date patterns like "April 22", "May 2", "May 8 -", etc. IMPORTANT: If the deadline month is BEFORE the event month, it's the SAME YEAR as the event (not current year ${currentYear}). For deadlines AFTER the event, use the event year too. Example: If event is May 2025 and deadline is "April 22", use "2025-04-22" (same year as event). If deadline is "May 2 - Advance Form", use "2025-05-02".
 
-event_links: Array - Extract EVERY SINGLE LINK in the email with a clear description: [{url, description}]. Check both the main email body AND the "Links found in email:" section at the end. Look for: "Artist Letter", "Advance Form", "Guest List Link", "Ticket Link", "Flyers", "Hotel Booking", "Shuttle Link", "W-9 Form", "Production Pack", etc. DO NOT miss any URLs - extract them ALL.
+event_links: Array - CRITICAL: I will provide you with a pre-extracted list of ALL links from the email as structured data. DO NOT parse links from the email body text. Instead, use the links I provide in the "STRUCTURED LINKS" section below. Convert each link from the format "Description: URL" to the format [{url: "full URL", description: "the description text"}]. Include ALL links provided - do not filter, skip, or consolidate any!
 
 CRITICAL NOTES:
 - Return a FLAT JSON structure with top-level fields (event_name, status, venue, dates, stages, contacts, etc.)
@@ -294,7 +299,16 @@ CRITICAL NOTES:
 - Calculate dates from today (${todayStr}) - convert relative dates like "next Friday" or month names to YYYY-MM-DD
 - Only include fields that have actual data
 
-Return ONLY the JSON object. No markdown code blocks, no explanation, no wrapper. Just pure JSON starting with { and ending with }.`;
+Return ONLY the JSON object. No markdown code blocks, no explanation, no wrapper. Just pure JSON starting with { and ending with }.
+
+---
+
+STRUCTURED LINKS (use these exactly as provided):
+${email.links && email.links.length > 0 ? email.links.join('\n') : 'No links found in email'}
+
+---
+
+Use the links above to populate the event_links field. Convert each line from "Description: URL" format to {url: "URL", description: "Description"} format.`;
 }
 
 /**

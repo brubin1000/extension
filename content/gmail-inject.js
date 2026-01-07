@@ -841,6 +841,7 @@ function extractEmailContent() {
     sender,
     senderEmail,
     body: body,  // Already truncated smartly above (8000 + links), no need to truncate again
+    links: allLinks,  // Pass extracted links as structured array
     messageId,
     threadId,
     participants,
@@ -1043,6 +1044,22 @@ function getDropdownHTML() {
         <div class="atms-form-group">
           <label class="atms-label">Attendees</label>
           <div class="atms-attendees" id="attendees-list"></div>
+          <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center;">
+            <input
+              type="email"
+              class="atms-input"
+              id="add-attendee-input"
+              placeholder="Add email to invite..."
+              style="flex: 1; font-size: 13px;"
+            >
+            <button
+              class="atms-btn atms-btn-secondary"
+              id="add-attendee-btn"
+              style="padding: 8px 16px; font-size: 13px; white-space: nowrap;"
+            >
+              Add
+            </button>
+          </div>
         </div>
 
         <button class="atms-btn atms-btn-primary" id="btn-create">Create Event</button>
@@ -1126,7 +1143,18 @@ function setupDropdownEvents() {
   
   // Create button
   currentDropdown.querySelector('#btn-create')?.addEventListener('click', handleCreate);
-  
+
+  // Add custom attendee button
+  currentDropdown.querySelector('#add-attendee-btn')?.addEventListener('click', handleAddCustomAttendee);
+
+  // Allow Enter key in attendee input
+  currentDropdown.querySelector('#add-attendee-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddCustomAttendee();
+    }
+  });
+
   // Success/Error buttons
   currentDropdown.querySelector('#btn-view-calendar')?.addEventListener('click', () => {
     window.open('https://calendar.google.com', '_blank');
@@ -1141,10 +1169,89 @@ function setupDropdownEvents() {
  */
 function updateScreen(screen) {
   if (!currentDropdown) return;
-  
+
   currentDropdown.querySelectorAll('.atms-screen').forEach(s => s.classList.remove('active'));
   currentDropdown.querySelector(`#screen-${screen}`)?.classList.add('active');
   eventState.screen = screen;
+}
+
+/**
+ * Handle adding a custom attendee
+ */
+function handleAddCustomAttendee() {
+  const input = currentDropdown.querySelector('#add-attendee-input');
+  const attendeesList = currentDropdown.querySelector('#attendees-list');
+
+  if (!input || !attendeesList) return;
+
+  const email = input.value.trim();
+
+  // Validate email
+  if (!email) {
+    return;
+  }
+
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    alert('Please enter a valid email address');
+    return;
+  }
+
+  // Check if email already exists in participants or custom attendees
+  const existingEmails = new Set();
+  attendeesList.querySelectorAll('.atms-attendee').forEach(el => {
+    existingEmails.add(el.dataset.email);
+  });
+
+  if (existingEmails.has(email)) {
+    alert('This email is already in the attendees list');
+    input.value = '';
+    return;
+  }
+
+  // Create attendee element
+  const attendeeDiv = document.createElement('div');
+  attendeeDiv.className = 'atms-attendee selected'; // Auto-select custom attendees
+  attendeeDiv.dataset.email = email;
+  attendeeDiv.dataset.custom = 'true'; // Mark as custom attendee
+  attendeeDiv.innerHTML = `
+    <span>${escapeHtml(email)}</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor: pointer; opacity: 0.6; margin-left: auto;" class="remove-custom-attendee">
+      <line x1="18" y1="6" x2="6" y2="18"/>
+      <line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  `;
+
+  // Add click handler for selection toggle
+  attendeeDiv.addEventListener('click', (e) => {
+    // Don't toggle if clicking the remove button
+    if (e.target.closest('.remove-custom-attendee')) return;
+
+    attendeeDiv.classList.toggle('selected');
+    if (attendeeDiv.classList.contains('selected')) {
+      eventState.selectedAttendees.add(email);
+    } else {
+      eventState.selectedAttendees.delete(email);
+    }
+  });
+
+  // Add remove button handler
+  attendeeDiv.querySelector('.remove-custom-attendee').addEventListener('click', (e) => {
+    e.stopPropagation();
+    attendeeDiv.remove();
+    eventState.selectedAttendees.delete(email);
+  });
+
+  // Add to list and auto-select
+  attendeesList.appendChild(attendeeDiv);
+  eventState.selectedAttendees.add(email);
+
+  // Clear input
+  input.value = '';
+
+  console.log('[ATMS] Added custom attendee:', email);
+  console.log('[ATMS] Selected attendees:', Array.from(eventState.selectedAttendees));
 }
 
 /**
@@ -1385,8 +1492,11 @@ function renderAdditionalFields(details) {
   }
 
   if (details.important_deadlines && details.important_deadlines.length > 0) {
+    console.log(`[ATMS] Rendering ${details.important_deadlines.length} important deadlines:`, details.important_deadlines);
     const section = createDeadlinesSection(details.important_deadlines);
     container.appendChild(section);
+  } else {
+    console.log('[ATMS] No important_deadlines to render:', details.important_deadlines);
   }
 
   if (details.event_links && details.event_links.length > 0) {
@@ -1836,7 +1946,13 @@ function createDeadlinesSection(deadlines) {
     const deadlineDiv = document.createElement('div');
     deadlineDiv.style.cssText = 'display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; padding: 8px; background: #0d0f14; border-radius: 6px;';
 
-    const dateStr = deadline.date ? new Date(deadline.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    // Parse date as local date (not UTC) to avoid timezone offset issues
+    let dateStr = '';
+    if (deadline.date) {
+      const [year, month, day] = deadline.date.split('-');
+      const localDate = new Date(year, month - 1, day); // month is 0-indexed
+      dateStr = localDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
 
     deadlineDiv.innerHTML = `
       <div style="font-weight: 600; color: #22c7a8; min-width: 80px; font-size: 13px;">${escapeHtml(dateStr)}</div>
