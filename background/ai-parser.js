@@ -120,12 +120,17 @@ export async function extractEventFromEmail(email) {
     // Log set time details for debugging
     if (parsed.stages && parsed.stages.length > 0 && parsed.stages[0].sets && parsed.stages[0].sets.length > 0) {
       const firstSet = parsed.stages[0].sets[0];
+      const totalSets = parsed.stages[0].sets.length;
       info('Primary set details:', {
         set_date: firstSet.set_date,
         start_time: firstSet.start_time,
         end_time: firstSet.end_time,
         stage_name: parsed.stages[0].stage_name
       });
+      info(`🎵 TOTAL SETS EXTRACTED: ${totalSets} artists on ${parsed.stages[0].stage_name}`);
+      if (totalSets > 1) {
+        info('Full lineup:', parsed.stages[0].sets.map(s => `${s.artist_name} (${s.start_time}-${s.end_time})`));
+      }
     } else {
       warn('No stages/sets extracted from email');
     }
@@ -246,9 +251,9 @@ venue: {venue_name, venue_address, city, state, country}
 dates: {start_date (YYYY-MM-DD), end_date (YYYY-MM-DD if multi-day), timezone} - This is for the OVERALL event/festival dates
 organizer: {name, email, phone}
 
-stages: Array - CRITICAL: ALWAYS create at least ONE stage with the artist's performance details. If the email mentions different rooms or stages (like "Main Room", "bionicJUNGLE stage", "Lounge"), create separate stage objects for each. Each stage has:
+stages: Array - CRITICAL: Extract the COMPLETE LINEUP for each stage/room. If the email has a "ROS" (Rest of Schedule), "SET TIMES", or "LINEUP" section, extract ALL artists listed, not just the primary artist. Create one set object for EACH artist performing. If the email mentions different rooms or stages (like "Main Room", "bionicJUNGLE stage", "Lounge"), create separate stage objects for each. Each stage has:
 - stage_name (e.g., "bionicJUNGLE", "Main Stage", "Arena", or just the venue name if no stage specified)
-- sets: [{
+- sets: [{ // ONE SET OBJECT PER ARTIST - Extract ALL artists from ROS/lineup/set times section
     artist_name, set_name,
     set_date (YYYY-MM-DD),
     start_time (HH:MM in 24hr format),
@@ -265,6 +270,25 @@ stages: Array - CRITICAL: ALWAYS create at least ONE stage with the artist's per
     production_pack_links: [{url, description: "label what the link is for"}],
     status: "scheduled/confirmed/cancelled"
   }]
+
+  CRITICAL EXAMPLES FOR FULL LINEUP EXTRACTION:
+
+  Example 1 - ROS (Rest of Schedule):
+  Email contains:
+  "ROS
+  4:00am - 5:30am BOYS NOIZE
+  2:30am - 4:00am X CLUB
+  1:30am - 2:30am DJ FUCKOFF"
+
+  You MUST create 3 separate set objects:
+  sets: [
+    {artist_name: "BOYS NOIZE", set_date: "2025-05-17", start_time: "04:00", end_time: "05:30"},
+    {artist_name: "X CLUB", set_date: "2025-05-17", start_time: "02:30", end_time: "04:00"},
+    {artist_name: "DJ FUCKOFF", set_date: "2025-05-17", start_time: "01:30", end_time: "02:30"}
+  ]
+
+  Example 2 - SET TIMES section:
+  If you see a section labeled "SET TIME" or "SET TIMES" followed by a list of times and artists, extract EVERY SINGLE artist listed with their times.
 
   CRITICAL FOR SETS: The set_date, start_time, and end_time are THE MOST IMPORTANT FIELDS. These represent the ACTUAL PERFORMANCE TIME for the artist, NOT the overall event dates. For example:
   - If email says "EDC Las Vegas May 16-18" and "Your set: Friday 5/16 at 8:15pm - 9:30pm", then:
@@ -290,9 +314,9 @@ event_links: Array - CRITICAL: I will provide you with a pre-extracted list of A
 CRITICAL NOTES:
 - Return a FLAT JSON structure with top-level fields (event_name, status, venue, dates, stages, contacts, etc.)
 - DO NOT nest fields under section headers like "core_event_info" or "stages_and_sets"
-- ALWAYS create at least ONE stage with the artist's performance in the sets array
+- **EXTRACT THE FULL LINEUP - MOST IMPORTANT**: Look for sections titled "ROS" (Rest of Schedule), "SET TIMES", "LINEUP", or any list of artist names with times. Extract EVERY SINGLE ARTIST with their set times, not just the primary artist. If you see "ROS" followed by a list like "11pm-12am ARTIST A, 12am-1am ARTIST B", create a separate set object for BOTH artists. This complete lineup is CRITICAL for tour management!
 - Extract the SPECIFIC performance date and time (set_date, start_time, end_time) - NOT just the overall event dates
-- Convert ALL times to 24-hour format (HH:MM) - e.g., "8:15pm" becomes "20:15", "1:30am" becomes "01:30"
+- Convert ALL times to 24-hour format (HH:MM) - e.g., "8:15pm" becomes "20:15", "1:30am" becomes "01:30", "4:00am" becomes "04:00"
 - Extract timezone (use IANA format like "America/Los_Angeles" or abbreviation like "PDT/PST") - this is CRITICAL for tour management
 - Extract EVERY link you see in the email - check for hyperlinked text and plain URLs
 - If there are multiple rooms/stages, create separate stage objects for each
