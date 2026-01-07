@@ -106,6 +106,19 @@ export async function extractEventFromEmail(email) {
       hasArtistInfo: !!parsed.artist_information
     });
 
+    // Log set time details for debugging
+    if (parsed.stages && parsed.stages.length > 0 && parsed.stages[0].sets && parsed.stages[0].sets.length > 0) {
+      const firstSet = parsed.stages[0].sets[0];
+      info('Primary set details:', {
+        set_date: firstSet.set_date,
+        start_time: firstSet.start_time,
+        end_time: firstSet.end_time,
+        stage_name: parsed.stages[0].stage_name
+      });
+    } else {
+      warn('No stages/sets extracted from email');
+    }
+
     // Validate that we got meaningful data
     const hasEventName = parsed.event_name && parsed.event_name !== '';
     const hasDate = parsed.dates?.start_date && parsed.dates.start_date !== '';
@@ -219,14 +232,17 @@ Return a FLAT JSON object with these top-level fields:
 event_name: String (e.g., "EDC Las Vegas 25", "Duke Dumont at 1015 Folsom")
 status: String (confirmed/advancing/pending/cancelled)
 venue: {venue_name, venue_address, city, state, country}
-dates: {start_date (YYYY-MM-DD), end_date (YYYY-MM-DD if multi-day), timezone}
+dates: {start_date (YYYY-MM-DD), end_date (YYYY-MM-DD if multi-day), timezone} - This is for the OVERALL event/festival dates
 organizer: {name, email, phone}
 
-stages: Array - If the email mentions different rooms or stages (like "Main Room", "bionicJUNGLE stage", "Lounge"), create separate stage objects. Each stage has:
-- stage_name
+stages: Array - CRITICAL: ALWAYS create at least ONE stage with the artist's performance details. If the email mentions different rooms or stages (like "Main Room", "bionicJUNGLE stage", "Lounge"), create separate stage objects for each. Each stage has:
+- stage_name (e.g., "bionicJUNGLE", "Main Stage", "Arena", or just the venue name if no stage specified)
 - sets: [{
     artist_name, set_name,
-    set_date (YYYY-MM-DD), start_time (HH:MM 24hr), end_time, soundcheck_time,
+    set_date (YYYY-MM-DD),
+    start_time (HH:MM in 24hr format),
+    end_time (HH:MM in 24hr format),
+    soundcheck_time,
     crew_list: "text like 'DJ + 2'",
     guest_list_spots: number,
     ticket_link: "url",
@@ -238,6 +254,15 @@ stages: Array - If the email mentions different rooms or stages (like "Main Room
     production_pack_links: [{url, description: "label what the link is for"}],
     status: "scheduled/confirmed/cancelled"
   }]
+
+  CRITICAL FOR SETS: The set_date, start_time, and end_time are THE MOST IMPORTANT FIELDS. These represent the ACTUAL PERFORMANCE TIME for the artist, NOT the overall event dates. For example:
+  - If email says "EDC Las Vegas May 16-18" and "Your set: Friday 5/16 at 8:15pm - 9:30pm", then:
+    - dates.start_date = "2025-05-16", dates.end_date = "2025-05-18" (festival dates)
+    - sets[0].set_date = "2025-05-16" (specific performance day)
+    - sets[0].start_time = "20:15" (actual set start in 24hr format)
+    - sets[0].end_time = "21:30" (actual set end in 24hr format)
+  - ALWAYS extract start_time and end_time in 24-hour format (e.g., 8:15pm = "20:15", 1:30am = "01:30")
+  - If no specific set time mentioned, still create the stage/set structure with whatever info is available
 
 contacts: Array - Anyone from the venue/promoter side. Include name, email, phone, company, role (be specific: "Production Manager", "Artist Relations", etc.), is_primary. NOTE: Artist's crew (like "DJ + 1") goes in crew_list field, NOT in contacts.
 
@@ -254,10 +279,13 @@ event_links: Array - Extract EVERY SINGLE LINK in the email with a clear descrip
 CRITICAL NOTES:
 - Return a FLAT JSON structure with top-level fields (event_name, status, venue, dates, stages, contacts, etc.)
 - DO NOT nest fields under section headers like "core_event_info" or "stages_and_sets"
+- ALWAYS create at least ONE stage with the artist's performance in the sets array
+- Extract the SPECIFIC performance date and time (set_date, start_time, end_time) - NOT just the overall event dates
+- Convert ALL times to 24-hour format (HH:MM) - e.g., "8:15pm" becomes "20:15", "1:30am" becomes "01:30"
+- Extract timezone (use IANA format like "America/Los_Angeles" or abbreviation like "PDT/PST") - this is CRITICAL for tour management
 - Extract EVERY link you see in the email - check for hyperlinked text and plain URLs
-- If there are multiple rooms/stages, create separate stage objects
-- Convert ALL times to 24-hour format (HH:MM)
-- Calculate dates from today (${todayStr})
+- If there are multiple rooms/stages, create separate stage objects for each
+- Calculate dates from today (${todayStr}) - convert relative dates like "next Friday" or month names to YYYY-MM-DD
 - Only include fields that have actual data
 
 Return ONLY the JSON object. No markdown code blocks, no explanation, no wrapper. Just pure JSON starting with { and ending with }.`;

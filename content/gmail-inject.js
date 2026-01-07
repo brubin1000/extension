@@ -1247,12 +1247,27 @@ function populateReviewForm() {
 
   // Populate core fields - support both new and old schema
   currentDropdown.querySelector('#input-title').value = details.event_name || details.title || '';
-  currentDropdown.querySelector('#input-date').value = details.dates?.start_date || details.date || '';
 
-  // Extract time from stages or use old time field
+  // Extract date from specific set date (PRIORITY) or fall back to event start date
+  let dateValue = details.date || details.dates?.start_date || '';
+  if (details.stages && details.stages.length > 0 && details.stages[0].sets && details.stages[0].sets.length > 0) {
+    const setDate = details.stages[0].sets[0].set_date;
+    if (setDate) {
+      dateValue = setDate;
+      console.log(`[ATMS] Using specific set date: ${setDate}`);
+    }
+  }
+  currentDropdown.querySelector('#input-date').value = dateValue;
+
+  // Extract time from specific set time (PRIORITY) or fall back to old time field
   let timeValue = details.time || '10:00';
   if (details.stages && details.stages.length > 0 && details.stages[0].sets && details.stages[0].sets.length > 0) {
-    timeValue = details.stages[0].sets[0].start_time || timeValue;
+    const setStartTime = details.stages[0].sets[0].start_time;
+    const setEndTime = details.stages[0].sets[0].end_time;
+    if (setStartTime) {
+      timeValue = setStartTime;
+      console.log(`[ATMS] Using specific set time: ${setStartTime}${setEndTime ? ` - ${setEndTime}` : ''}`);
+    }
   }
   currentDropdown.querySelector('#input-time').value = timeValue;
 
