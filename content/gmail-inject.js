@@ -796,12 +796,11 @@ function extractEmailContent() {
       });
     }
 
-    // IMPORTANT: Truncate body BEFORE appending links to leave room for links section
-    const maxBodyLength = 8000;  // Leave 2000+ chars for links
-    if (body.length > maxBodyLength) {
-      console.warn(`[ATMS] ⚠️ Body text is ${body.length} chars, truncating to ${maxBodyLength} to leave room for links`);
-      body = body.substring(0, maxBodyLength);
-    }
+    // IMPORTANT: For forwarded emails, the ORIGINAL email with set times is at the BOTTOM
+    // We need to capture the full email to get performance details
+    // The AI parser handles up to 12000 chars of body, and we typically have ~1500 chars of links
+    // So we can safely include the full body text without truncation
+    console.log(`[ATMS] ✅ Keeping full email body (${body.length} chars) - no truncation`);
 
     // Append links section AFTER truncation
     if (allLinks.length > 0) {

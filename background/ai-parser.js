@@ -55,6 +55,9 @@ export async function extractEventFromEmail(email) {
     info('Email body length:', email.body?.length || 0);
     info('Email body preview (last 500 chars):', (email.body || '').substring(Math.max(0, (email.body || '').length - 500)));
 
+    // DEBUG: Log FULL email body to see if set time is in there
+    info('🔍 FULL Email Body:', email.body);
+
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -87,6 +90,9 @@ export async function extractEventFromEmail(email) {
     info('Gemini response length:', text.length);
     info('Gemini raw response (first 500 chars):', text.substring(0, 500));
     info('Gemini raw response (last 200 chars):', text.substring(Math.max(0, text.length - 200)));
+
+    // DEBUG: Log FULL response to see what Gemini actually returned for sets
+    info('🔍 FULL Gemini Response:', text);
 
     // Parse JSON from response
     const parsed = parseJsonResponse(text);
