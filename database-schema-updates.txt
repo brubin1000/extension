@@ -1,0 +1,135 @@
+-- ATMS Extension - Database Schema Updates
+-- Execute this SQL in Supabase Dashboard → SQL Editor
+-- URL: https://qkbxjzdjibwztchvsaay.supabase.co
+
+-- ============================================================
+-- 1. Create event_participants table
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS event_participants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES calendar_events(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  name TEXT,
+  role TEXT CHECK (role IN ('to', 'cc', 'bcc', 'organizer')),
+  rsvp_status TEXT CHECK (rsvp_status IN ('needsAction', 'accepted', 'declined', 'tentative')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  CONSTRAINT unique_event_participant UNIQUE(event_id, email)
+);
+
+-- Indexes for event_participants
+CREATE INDEX IF NOT EXISTS idx_event_participants_event_id ON event_participants(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_participants_user_id ON event_participants(user_id);
+CREATE INDEX IF NOT EXISTS idx_event_participants_email ON event_participants(email);
+
+-- Enable Row Level Security
+ALTER TABLE event_participants ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for event_participants
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'event_participants' AND policyname = 'Users can view own event participants'
+    ) THEN
+        CREATE POLICY "Users can view own event participants"
+          ON event_participants FOR SELECT
+          USING (user_id = current_setting('request.jwt.claims', true)::json->>'email');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'event_participants' AND policyname = 'Users can insert own event participants'
+    ) THEN
+        CREATE POLICY "Users can insert own event participants"
+          ON event_participants FOR INSERT
+          WITH CHECK (user_id = current_setting('request.jwt.claims', true)::json->>'email');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'event_participants' AND policyname = 'Users can update own event participants'
+    ) THEN
+        CREATE POLICY "Users can update own event participants"
+          ON event_participants FOR UPDATE
+          USING (user_id = current_setting('request.jwt.claims', true)::json->>'email');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE tablename = 'event_participants' AND policyname = 'Users can delete own event participants'
+    ) THEN
+        CREATE POLICY "Users can delete own event participants"
+          ON event_participants FOR DELETE
+          USING (user_id = current_setting('request.jwt.claims', true)::json->>'email');
+    END IF;
+END
+$$;
+
+-- ============================================================
+-- 2. Add thread_id and last_thread_sync to calendar_events
+-- ============================================================
+
+-- Add columns if they don't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'calendar_events' AND column_name = 'thread_id'
+    ) THEN
+        ALTER TABLE calendar_events ADD COLUMN thread_id TEXT;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'calendar_events' AND column_name = 'last_thread_sync'
+    ) THEN
+        ALTER TABLE calendar_events ADD COLUMN last_thread_sync TIMESTAMPTZ;
+    END IF;
+END
+$$;
+
+-- Indexes for thread tracking
+CREATE INDEX IF NOT EXISTS idx_calendar_events_thread_id ON calendar_events(thread_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_thread_sync
+  ON calendar_events(last_thread_sync)
+  WHERE thread_id IS NOT NULL;
+
+-- Composite indexes for performance
+CREATE INDEX IF NOT EXISTS idx_calendar_events_user_status
+  ON calendar_events(user_id, calendar_sync_status);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_events_user_date
+  ON calendar_events(user_id, start_date_time DESC);
+
+-- ============================================================
+-- Verification Queries
+-- ============================================================
+
+-- Run these to verify the schema was created correctly:
+
+-- Check event_participants table structure
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'event_participants'
+ORDER BY ordinal_position;
+
+-- Check calendar_events new columns
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'calendar_events'
+AND column_name IN ('thread_id', 'last_thread_sync');
+
+-- Check indexes
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename IN ('event_participants', 'calendar_events')
+ORDER BY tablename, indexname;
+
+-- Check RLS policies
+SELECT tablename, policyname, cmd, qual
+FROM pg_policies
+WHERE tablename IN ('event_participants', 'calendar_events');

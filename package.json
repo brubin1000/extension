@@ -1,0 +1,19 @@
+{
+  "name": "atms-extension",
+  "version": "1.0.0",
+  "description": "ATMS - Artist Tour Management System Chrome Extension",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild background/service-worker.js --bundle --outfile=dist/service-worker.js --format=esm --target=es2020",
+    "watch": "esbuild background/service-worker.js --bundle --outfile=dist/service-worker.js --format=esm --target=es2020 --watch",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.78.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  },
+  "author": "ATMS",
+  "license": "MIT"
+}
