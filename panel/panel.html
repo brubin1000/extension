@@ -280,16 +280,18 @@
             <div class="form-section">
               <h4>Basic Info</h4>
               <div class="form-group">
-                <label for="edit-artist-name">Artist Name *</label>
-                <input type="text" id="edit-artist-name" name="artistName" required placeholder="e.g., INVT">
+                <label for="edit-artist-name">Artist/Act Name *</label>
+                <input type="text" id="edit-artist-name" name="artistName" required placeholder="e.g., The Band Name">
               </div>
               <div class="form-row">
                 <div class="form-group">
                   <label for="edit-artist-type">Type</label>
                   <select id="edit-artist-type" name="type">
+                    <option value="other">Other</option>
                     <option value="dj">DJ</option>
                     <option value="live_act">Live Act</option>
                     <option value="band">Band</option>
+                    <option value="solo">Solo Artist</option>
                   </select>
                 </div>
                 <div class="form-group">
@@ -301,7 +303,6 @@
                 <label for="edit-profile-org">Organization</label>
                 <select id="edit-profile-org" name="organizationId">
                   <option value="">Personal (Private)</option>
-                  <!-- Populated by JS -->
                 </select>
               </div>
             </div>
@@ -309,174 +310,92 @@
             <!-- Contacts -->
             <div class="form-section">
               <h4>Advance Contacts</h4>
-              <div id="contacts-rows">
-                <!-- Contact rows added by JS -->
-              </div>
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-add-contact-row">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Add Contact
-              </button>
+              <div id="contacts-rows"></div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-add-contact-row">+ Add Contact</button>
             </div>
 
-            <!-- Tech Specs -->
+            <!-- Tech Specs - SIMPLIFIED -->
             <div class="form-section">
-              <h4>Tech Specs</h4>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="edit-mixer-preferred">Mixer</label>
-                  <input type="text" id="edit-mixer-preferred" name="mixer" placeholder="e.g., Pioneer DJM V10">
-                </div>
-                <div class="form-group form-group-sm">
-                  <label for="edit-mixer-quantity">Qty</label>
-                  <input type="number" id="edit-mixer-quantity" name="mixerQty" min="0" placeholder="1">
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="edit-cdjs-model">CDJ Model</label>
-                  <input type="text" id="edit-cdjs-model" name="cdjModel" placeholder="e.g., CDJ 2000 NXS2">
-                </div>
-                <div class="form-group form-group-sm">
-                  <label for="edit-cdjs-quantity">Qty</label>
-                  <input type="number" id="edit-cdjs-quantity" name="cdjQty" min="0" placeholder="4">
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="edit-booth-monitors">Booth Monitors</label>
-                  <input type="text" id="edit-booth-monitors" name="boothMonitors" placeholder="e.g., 2 monitors">
-                </div>
-                <div class="form-group">
-                  <label for="edit-subwoofers">Subwoofers</label>
-                  <input type="text" id="edit-subwoofers" name="subwoofers" placeholder="e.g., 2 subs">
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="edit-mic-model">Microphone</label>
-                  <input type="text" id="edit-mic-model" name="micModel" placeholder="e.g., SM57">
-                </div>
-                <div class="form-group form-group-sm">
-                  <label for="edit-mic-quantity">Qty</label>
-                  <input type="number" id="edit-mic-quantity" name="micQty" min="0" placeholder="1">
-                </div>
+              <h4>Tech Specs / Input List</h4>
+              <p class="form-hint">Paste your requirements or link to a document</p>
+              <div class="form-group">
+                <label for="edit-tech-text">Requirements (text)</label>
+                <textarea id="edit-tech-text" name="techText" rows="6" placeholder="Paste your tech rider text here..."></textarea>
               </div>
               <div class="form-group">
-                <label class="checkbox-label">
-                  <input type="checkbox" id="edit-recording-required" name="recordingRequired">
-                  Recording Required
-                </label>
-              </div>
-              <div class="form-group">
-                <label for="edit-recording-setup">Recording Setup</label>
-                <input type="text" id="edit-recording-setup" name="recordingSetup" placeholder="e.g., USB recording from mixer">
+                <label for="edit-tech-doc">Or link to document</label>
+                <input type="url" id="edit-tech-doc" name="techDoc" placeholder="https://drive.google.com/...">
               </div>
             </div>
 
-            <!-- Lighting -->
+            <!-- Stage Requirements - SIMPLIFIED -->
             <div class="form-section">
-              <h4>Lighting</h4>
+              <h4>Stage Requirements</h4>
               <div class="form-group">
-                <label for="edit-lighting-preference">Lighting Preference</label>
-                <input type="text" id="edit-lighting-preference" name="lighting" placeholder="e.g., Dark/minimal">
+                <label for="edit-stage-text">Requirements (text)</label>
+                <textarea id="edit-stage-text" name="stageText" rows="4" placeholder="Stage setup, positioning, backline needs..."></textarea>
               </div>
               <div class="form-group">
-                <label for="edit-lighting-notes">Lighting Notes</label>
-                <textarea id="edit-lighting-notes" name="lightingNotes" rows="2" placeholder="e.g., No strobes on stage"></textarea>
+                <label for="edit-stage-doc">Or link to document</label>
+                <input type="url" id="edit-stage-doc" name="stageDoc" placeholder="https://drive.google.com/...">
               </div>
             </div>
 
-            <!-- Hospitality -->
+            <!-- Hospitality - SIMPLIFIED -->
             <div class="form-section">
-              <h4>Hospitality - Drinks</h4>
-              <div id="drinks-rows">
-                <!-- Drink rows added by JS -->
+              <h4>Hospitality</h4>
+              <div class="form-group">
+                <label for="edit-hospitality-text">Requirements (text)</label>
+                <textarea id="edit-hospitality-text" name="hospitalityText" rows="4" placeholder="Food, drinks, dressing room needs..."></textarea>
               </div>
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-add-drink-row">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Add Drink
-              </button>
+              <div class="form-group">
+                <label for="edit-hospitality-doc">Or link to document</label>
+                <input type="url" id="edit-hospitality-doc" name="hospitalityDoc" placeholder="https://drive.google.com/...">
+              </div>
             </div>
 
+            <!-- Terms - SIMPLIFIED -->
             <div class="form-section">
-              <h4>Hospitality - Food</h4>
+              <h4>Terms (Travel, Hotel, etc)</h4>
               <div class="form-group">
-                <label for="edit-food-meals">Meals</label>
-                <input type="text" id="edit-food-meals" name="meals" placeholder="e.g., 1 meal per performer">
+                <label for="edit-terms-text">Terms (text)</label>
+                <textarea id="edit-terms-text" name="termsText" rows="4" placeholder="Transportation, hotel, buyouts..."></textarea>
               </div>
               <div class="form-group">
-                <label for="edit-food-notes">Food Notes</label>
-                <textarea id="edit-food-notes" name="foodNotes" rows="2" placeholder="e.g., Dietary restrictions"></textarea>
+                <label for="edit-terms-doc">Or link to document</label>
+                <input type="url" id="edit-terms-doc" name="termsDoc" placeholder="https://drive.google.com/...">
               </div>
             </div>
 
+            <!-- Document Links - Quick Access -->
             <div class="form-section">
-              <h4>Hospitality - Other</h4>
-              <div id="hosp-other-rows">
-                <!-- Other hospitality rows added by JS -->
-              </div>
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-add-hosp-other-row">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Add Item
-              </button>
-            </div>
-
-            <!-- Terms -->
-            <div class="form-section">
-              <h4>Terms</h4>
+              <h4>Quick Document Links</h4>
+              <p class="form-hint">Add links to commonly shared documents</p>
               <div class="form-group">
-                <label for="edit-transportation">Transportation</label>
-                <input type="text" id="edit-transportation" name="transportation" placeholder="e.g., Ground transportation covered">
+                <label for="edit-doc-tech">Tech Rider</label>
+                <input type="url" id="edit-doc-tech" name="docTech" placeholder="https://...">
               </div>
               <div class="form-group">
-                <label for="edit-hotel-requirements">Hotel Requirements</label>
-                <input type="text" id="edit-hotel-requirements" name="hotelRequirements" placeholder="e.g., Within 20 min of venue">
+                <label for="edit-doc-stage">Stage Plot / Input List</label>
+                <input type="url" id="edit-doc-stage" name="docStage" placeholder="https://...">
               </div>
               <div class="form-group">
-                <label for="edit-meals-terms">Meals Terms</label>
-                <input type="text" id="edit-meals-terms" name="mealsTerms" placeholder="e.g., Meal buyout $50/person">
+                <label for="edit-doc-hospitality">Hospitality Rider</label>
+                <input type="url" id="edit-doc-hospitality" name="docHospitality" placeholder="https://...">
+              </div>
+              <div class="form-group">
+                <label for="edit-doc-press">Press Kit / EPK</label>
+                <input type="url" id="edit-doc-press" name="docPress" placeholder="https://...">
+              </div>
+              <div class="form-group">
+                <label for="edit-doc-other">Other</label>
+                <input type="url" id="edit-doc-other" name="docOther" placeholder="https://...">
               </div>
             </div>
 
-            <!-- Documents -->
-            <div class="form-section">
-              <h4>Document Links</h4>
-              <div class="form-group">
-                <label for="edit-tech-rider-url">Tech Rider URL</label>
-                <input type="url" id="edit-tech-rider-url" name="techRiderUrl" placeholder="https://drive.google.com/...">
-              </div>
-              <div class="form-group">
-                <label for="edit-stage-rider-url">Stage Rider URL</label>
-                <input type="url" id="edit-stage-rider-url" name="stageRiderUrl" placeholder="https://drive.google.com/...">
-              </div>
-              <div class="form-group">
-                <label for="edit-press-kit-url">Press Kit URL</label>
-                <input type="url" id="edit-press-kit-url" name="pressKitUrl" placeholder="https://drive.google.com/...">
-              </div>
-              <div class="form-group">
-                <label for="edit-hospitality-url">Hospitality Rider URL</label>
-                <input type="url" id="edit-hospitality-url" name="hospitalityUrl" placeholder="https://drive.google.com/...">
-              </div>
-            </div>
-
-            <!-- Delete Button (only for editing) -->
+            <!-- Delete Button -->
             <div class="form-section form-section-danger">
-              <button type="button" class="btn btn-danger full-width" id="btn-delete-profile" style="display: none;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                </svg>
-                Delete Profile
-              </button>
+              <button type="button" class="btn btn-danger full-width" id="btn-delete-profile" style="display: none;">Delete Profile</button>
             </div>
           </form>
         </div>

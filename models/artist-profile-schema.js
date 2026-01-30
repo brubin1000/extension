@@ -1,12 +1,15 @@
 /**
- * Artist Profile Schema
- * Data model for DJ/artist tech riders, hospitality, and contact info
+ * Artist Profile Schema - SIMPLIFIED
+ * Works for DJs, bands, live acts, any performer type
+ * Each section: raw text OR document link - user's choice
  */
 
 export const ARTIST_TYPES = {
   DJ: 'dj',
   LIVE_ACT: 'live_act',
-  BAND: 'band'
+  BAND: 'band',
+  SOLO: 'solo',
+  OTHER: 'other'
 };
 
 export const VISIBILITY = {
@@ -23,8 +26,7 @@ export function generateProfileId() {
 
 /**
  * Creates a new artist profile with defaults
- * @param {Object} data - Partial profile data
- * @returns {Object} Complete profile object
+ * SIMPLIFIED: Each section is just text + optional doc link
  */
 export function createArtistProfile(data = {}) {
   const now = new Date().toISOString();
@@ -32,8 +34,8 @@ export function createArtistProfile(data = {}) {
   return {
     id: data.id || generateProfileId(),
     artistName: data.artistName || '',
-    type: data.type || ARTIST_TYPES.DJ,
-    crewSize: data.crewSize || 1,
+    type: data.type || ARTIST_TYPES.OTHER,
+    crewSize: data.crewSize || null,
 
     // Organization for shared access
     organizationId: data.organizationId || null,
@@ -41,88 +43,38 @@ export function createArtistProfile(data = {}) {
 
     // Contacts array
     contacts: data.contacts || [],
-    // Contact shape: { id, name, phone, email, role, isPrimary }
+    // Contact shape: { name, phone, email, role, isPrimary }
 
-    // Terms and conditions
-    terms: {
-      transportation: data.terms?.transportation || '',
-      meals: data.terms?.meals || '',
-      hotelRequirements: data.terms?.hotelRequirements || '',
-      cancellationPolicy: data.terms?.cancellationPolicy || '',
-      securityRequirements: data.terms?.securityRequirements || ''
-    },
-
-    // Technical specifications
+    // SIMPLIFIED SECTIONS - each has text + documentUrl
     techSpecs: {
-      mixer: {
-        preferred: data.techSpecs?.mixer?.preferred || '',
-        acceptable: data.techSpecs?.mixer?.acceptable || [],
-        quantity: data.techSpecs?.mixer?.quantity || 1
-      },
-      cdjs: {
-        model: data.techSpecs?.cdjs?.model || '',
-        quantity: data.techSpecs?.cdjs?.quantity || 2,
-        minimum: data.techSpecs?.cdjs?.minimum || '',
-        notes: data.techSpecs?.cdjs?.notes || ''
-      },
-      monitors: {
-        boothMonitors: data.techSpecs?.monitors?.boothMonitors || '',
-        subwoofers: data.techSpecs?.monitors?.subwoofers || '',
-        notes: data.techSpecs?.monitors?.notes || ''
-      },
-      microphone: {
-        model: data.techSpecs?.microphone?.model || '',
-        quantity: data.techSpecs?.microphone?.quantity || 0,
-        cables: data.techSpecs?.microphone?.cables || []
-      },
-      recording: {
-        required: data.techSpecs?.recording?.required || false,
-        setup: data.techSpecs?.recording?.setup || ''
-      },
-      other: data.techSpecs?.other || [],
-      summary: data.techSpecs?.summary || ''
+      text: data.techSpecs?.text || '',
+      documentUrl: data.techSpecs?.documentUrl || ''
     },
 
-    // Lighting preferences
-    lighting: {
-      preference: data.lighting?.preference || '',
-      notes: data.lighting?.notes || ''
-    },
-
-    // Hospitality requirements
     hospitality: {
-      drinks: data.hospitality?.drinks || [],
-      // Drink shape: { item, quantity, notes }
-      food: {
-        meals: data.hospitality?.food?.meals || '',
-        notes: data.hospitality?.food?.notes || ''
-      },
-      other: data.hospitality?.other || [],
-      // Other shape: { item, quantity, notes }
-      summary: data.hospitality?.summary || ''
+      text: data.hospitality?.text || '',
+      documentUrl: data.hospitality?.documentUrl || ''
     },
 
-    // Document links (URLs)
+    stageRequirements: {
+      text: data.stageRequirements?.text || '',
+      documentUrl: data.stageRequirements?.documentUrl || ''
+    },
+
+    terms: {
+      text: data.terms?.text || '',
+      documentUrl: data.terms?.documentUrl || ''
+    },
+
+    // Quick-access document links
     documents: {
-      techRider: {
-        url: data.documents?.techRider?.url || '',
-        lastUpdated: data.documents?.techRider?.lastUpdated || null
-      },
-      stageRider: {
-        url: data.documents?.stageRider?.url || '',
-        lastUpdated: data.documents?.stageRider?.lastUpdated || null
-      },
-      pressKit: {
-        url: data.documents?.pressKit?.url || ''
-      },
-      hospitality: {
-        url: data.documents?.hospitality?.url || ''
-      }
+      techRider: data.documents?.techRider || '',
+      stageRider: data.documents?.stageRider || '',
+      hospitalityRider: data.documents?.hospitalityRider || '',
+      pressKit: data.documents?.pressKit || '',
+      inputList: data.documents?.inputList || '',
+      other: data.documents?.other || ''
     },
-
-    // Media assets
-    media: data.media || [],
-    // Media shape: { id, type, url, description, isApproved }
 
     // Metadata
     createdAt: data.createdAt || now,
@@ -133,8 +85,6 @@ export function createArtistProfile(data = {}) {
 
 /**
  * Validate a profile has required fields
- * @param {Object} profile
- * @returns {{ valid: boolean, errors: string[] }}
  */
 export function validateProfile(profile) {
   const errors = [];
@@ -151,159 +101,139 @@ export function validateProfile(profile) {
 }
 
 /**
- * Generate tech specs summary for copy/paste
+ * Generate section text for copy/paste
  * @param {Object} profile
- * @returns {string}
+ * @param {string} section - 'tech', 'hospitality', 'stage', 'terms', 'contacts', 'full'
  */
-export function generateTechSpecsSummary(profile) {
-  const ts = profile.techSpecs;
-  if (!ts) return '';
+export function generateSectionText(profile, section) {
+  switch (section) {
+    case 'tech':
+      return formatSection('TECH SPECS', profile.techSpecs);
 
-  const lines = [];
+    case 'hospitality':
+      return formatSection('HOSPITALITY', profile.hospitality);
 
-  if (ts.mixer?.preferred) {
-    lines.push(`Mixer: ${ts.mixer.preferred}`);
-  }
-  if (ts.cdjs?.model) {
-    let cdj = `CDJs: ${ts.cdjs.quantity}x ${ts.cdjs.model}`;
-    if (ts.cdjs.minimum) cdj += ` (minimum: ${ts.cdjs.minimum})`;
-    if (ts.cdjs.notes) cdj += ` - ${ts.cdjs.notes}`;
-    lines.push(cdj);
-  }
-  if (ts.monitors?.boothMonitors) {
-    let mon = `Booth Monitors: ${ts.monitors.boothMonitors}`;
-    if (ts.monitors.subwoofers) mon += ` + ${ts.monitors.subwoofers} subs`;
-    if (ts.monitors.notes) mon += ` - ${ts.monitors.notes}`;
-    lines.push(mon);
-  }
-  if (ts.microphone?.model) {
-    let mic = `Microphone: ${ts.microphone.quantity}x ${ts.microphone.model}`;
-    if (ts.microphone.cables?.length) mic += ` (${ts.microphone.cables.join(', ')})`;
-    lines.push(mic);
-  }
-  if (ts.recording?.required && ts.recording.setup) {
-    lines.push(`Recording: ${ts.recording.setup}`);
-  }
-  if (ts.other?.length) {
-    lines.push(`Other: ${ts.other.join(', ')}`);
-  }
+    case 'stage':
+      return formatSection('STAGE REQUIREMENTS', profile.stageRequirements);
 
-  return lines.join('\n');
+    case 'terms':
+      return formatSection('TERMS', profile.terms);
+
+    case 'contacts':
+      return formatContacts(profile.contacts);
+
+    case 'full':
+      return generateFullProfileText(profile);
+
+    default:
+      return '';
+  }
 }
 
-/**
- * Generate hospitality summary for copy/paste
- * @param {Object} profile
- * @returns {string}
- */
-export function generateHospitalitySummary(profile) {
-  const h = profile.hospitality;
-  if (!h) return '';
+function formatSection(title, data) {
+  if (!data) return '';
 
-  const lines = [];
-
-  if (h.drinks?.length) {
-    const drinksList = h.drinks.map(d => {
-      let str = `${d.quantity} ${d.item}`;
-      if (d.notes) str += ` (${d.notes})`;
-      return str;
-    }).join(', ');
-    lines.push(`Drinks: ${drinksList}`);
+  const parts = [];
+  if (data.text) {
+    parts.push(data.text);
+  }
+  if (data.documentUrl) {
+    parts.push(`Document: ${data.documentUrl}`);
   }
 
-  if (h.food?.meals) {
-    let food = `Food: ${h.food.meals}`;
-    if (h.food.notes) food += ` - ${h.food.notes}`;
-    lines.push(food);
-  }
-
-  if (h.other?.length) {
-    const otherList = h.other.map(o => {
-      let str = `${o.quantity} ${o.item}`;
-      if (o.notes) str += ` (${o.notes})`;
-      return str;
-    }).join(', ');
-    lines.push(`Other: ${otherList}`);
-  }
-
-  return lines.join('\n');
+  if (parts.length === 0) return '';
+  return `--- ${title} ---\n${parts.join('\n')}`;
 }
 
-/**
- * Generate contacts summary for copy/paste
- * @param {Object} profile
- * @returns {string}
- */
-export function generateContactsSummary(profile) {
-  const contacts = profile.contacts;
+function formatContacts(contacts) {
   if (!contacts?.length) return 'No contacts';
 
-  return contacts.map(c => {
+  const lines = contacts.map(c => {
     const parts = [c.name];
-    if (c.role) parts.push(`(${c.role})`);
+    if (c.role) parts[0] += ` (${c.role})`;
     if (c.phone) parts.push(c.phone);
     if (c.email) parts.push(c.email);
-    return parts.join(' - ');
-  }).join('\n');
+    if (c.isPrimary) parts.push('[PRIMARY]');
+    return parts.join(' | ');
+  });
+
+  return `--- ADVANCE CONTACTS ---\n${lines.join('\n')}`;
 }
 
 /**
  * Generate full profile text for copy/paste
- * @param {Object} profile
- * @returns {string}
  */
 export function generateFullProfileText(profile) {
   const sections = [];
 
   // Header
-  sections.push(`=== ${profile.artistName.toUpperCase()} ===`);
-  sections.push(`Type: ${profile.type} | Crew Size: ${profile.crewSize}`);
+  sections.push(`========================================`);
+  sections.push(`${profile.artistName.toUpperCase()}`);
+  sections.push(`Type: ${formatType(profile.type)}${profile.crewSize ? ` | Crew: ${profile.crewSize}` : ''}`);
+  sections.push(`========================================`);
   sections.push('');
 
   // Contacts
-  sections.push('--- ADVANCE CONTACTS ---');
-  sections.push(generateContactsSummary(profile));
-  sections.push('');
+  if (profile.contacts?.length) {
+    sections.push(formatContacts(profile.contacts));
+    sections.push('');
+  }
 
   // Tech specs
-  sections.push('--- TECHNICAL SPECIFICATIONS ---');
-  sections.push(profile.techSpecs?.summary || generateTechSpecsSummary(profile));
-  sections.push('');
+  const tech = formatSection('TECH SPECS', profile.techSpecs);
+  if (tech) {
+    sections.push(tech);
+    sections.push('');
+  }
 
-  // Lighting
-  if (profile.lighting?.preference || profile.lighting?.notes) {
-    sections.push('--- LIGHTING ---');
-    if (profile.lighting.preference) sections.push(`Preference: ${profile.lighting.preference}`);
-    if (profile.lighting.notes) sections.push(profile.lighting.notes);
+  // Stage requirements
+  const stage = formatSection('STAGE REQUIREMENTS', profile.stageRequirements);
+  if (stage) {
+    sections.push(stage);
     sections.push('');
   }
 
   // Hospitality
-  sections.push('--- HOSPITALITY ---');
-  sections.push(profile.hospitality?.summary || generateHospitalitySummary(profile));
-  sections.push('');
+  const hosp = formatSection('HOSPITALITY', profile.hospitality);
+  if (hosp) {
+    sections.push(hosp);
+    sections.push('');
+  }
 
   // Terms
-  const terms = profile.terms;
-  if (terms?.transportation || terms?.meals || terms?.hotelRequirements) {
-    sections.push('--- TERMS ---');
-    if (terms.transportation) sections.push(`Transportation: ${terms.transportation}`);
-    if (terms.meals) sections.push(`Meals: ${terms.meals}`);
-    if (terms.hotelRequirements) sections.push(`Hotel: ${terms.hotelRequirements}`);
-    if (terms.cancellationPolicy) sections.push(`Cancellation: ${terms.cancellationPolicy}`);
-    if (terms.securityRequirements) sections.push(`Security: ${terms.securityRequirements}`);
+  const terms = formatSection('TERMS', profile.terms);
+  if (terms) {
+    sections.push(terms);
     sections.push('');
   }
 
   // Documents
   const docs = profile.documents;
-  if (docs?.techRider?.url || docs?.stageRider?.url || docs?.pressKit?.url) {
+  if (docs && Object.values(docs).some(v => v)) {
     sections.push('--- DOCUMENTS ---');
-    if (docs.techRider?.url) sections.push(`Tech Rider: ${docs.techRider.url}`);
-    if (docs.stageRider?.url) sections.push(`Stage Rider: ${docs.stageRider.url}`);
-    if (docs.pressKit?.url) sections.push(`Press Kit: ${docs.pressKit.url}`);
-    if (docs.hospitality?.url) sections.push(`Hospitality Rider: ${docs.hospitality.url}`);
+    if (docs.techRider) sections.push(`Tech Rider: ${docs.techRider}`);
+    if (docs.stageRider) sections.push(`Stage Rider: ${docs.stageRider}`);
+    if (docs.hospitalityRider) sections.push(`Hospitality: ${docs.hospitalityRider}`);
+    if (docs.inputList) sections.push(`Input List: ${docs.inputList}`);
+    if (docs.pressKit) sections.push(`Press Kit: ${docs.pressKit}`);
+    if (docs.other) sections.push(`Other: ${docs.other}`);
   }
 
   return sections.join('\n');
 }
+
+function formatType(type) {
+  const types = {
+    dj: 'DJ',
+    live_act: 'Live Act',
+    band: 'Band',
+    solo: 'Solo Artist',
+    other: 'Artist'
+  };
+  return types[type] || type || 'Artist';
+}
+
+// Legacy exports for backward compatibility
+export const generateTechSpecsSummary = (profile) => formatSection('TECH SPECS', profile.techSpecs);
+export const generateHospitalitySummary = (profile) => formatSection('HOSPITALITY', profile.hospitality);
+export const generateContactsSummary = (profile) => formatContacts(profile.contacts);

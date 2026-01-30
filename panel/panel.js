@@ -656,12 +656,6 @@ function setupProfileDrawers() {
 
   // Add contact row button
   document.getElementById('btn-add-contact-row')?.addEventListener('click', addContactRow);
-
-  // Add drink row button
-  document.getElementById('btn-add-drink-row')?.addEventListener('click', addDrinkRow);
-
-  // Add hospitality other row button
-  document.getElementById('btn-add-hosp-other-row')?.addEventListener('click', addHospOtherRow);
 }
 
 // Setup profile form handlers
@@ -866,7 +860,7 @@ function showProfileDetail(profile) {
   openDrawer('profileDetail');
 }
 
-// Render tech specs section
+// Render tech specs section (SIMPLIFIED)
 function renderTechSpecsSection(profile) {
   const container = document.getElementById('tech-specs-content');
   if (!container) return;
@@ -874,44 +868,18 @@ function renderTechSpecsSection(profile) {
   const tech = profile.techSpecs || {};
   let html = '';
 
-  if (tech.mixer?.preferred) {
-    html += `<div class="detail-row"><span class="detail-label">Mixer</span><span class="detail-value">${escapeHtml(tech.mixer.preferred)}${tech.mixer.quantity ? ` (×${tech.mixer.quantity})` : ''}</span></div>`;
+  if (tech.text) {
+    html += `<div class="section-text">${escapeHtml(tech.text).replace(/\n/g, '<br>')}</div>`;
   }
 
-  if (tech.cdjs?.model) {
-    html += `<div class="detail-row"><span class="detail-label">CDJs</span><span class="detail-value">${escapeHtml(tech.cdjs.model)}${tech.cdjs.quantity ? ` (×${tech.cdjs.quantity})` : ''}</span></div>`;
-  }
-
-  if (tech.monitors?.boothMonitors) {
-    html += `<div class="detail-row"><span class="detail-label">Booth Monitors</span><span class="detail-value">${escapeHtml(tech.monitors.boothMonitors)}</span></div>`;
-  }
-
-  if (tech.monitors?.subwoofers) {
-    html += `<div class="detail-row"><span class="detail-label">Subwoofers</span><span class="detail-value">${escapeHtml(tech.monitors.subwoofers)}</span></div>`;
-  }
-
-  if (tech.microphone?.model) {
-    html += `<div class="detail-row"><span class="detail-label">Microphone</span><span class="detail-value">${escapeHtml(tech.microphone.model)}${tech.microphone.quantity ? ` (×${tech.microphone.quantity})` : ''}</span></div>`;
-  }
-
-  if (tech.recording?.required) {
-    html += `<div class="detail-row"><span class="detail-label">Recording</span><span class="detail-value">${escapeHtml(tech.recording.setup || 'Required')}</span></div>`;
-  }
-
-  if (tech.other && tech.other.length > 0) {
-    tech.other.forEach(item => {
-      html += `<div class="detail-row"><span class="detail-label">${escapeHtml(item.item)}</span><span class="detail-value">${escapeHtml(item.notes || '')}</span></div>`;
-    });
-  }
-
-  if (profile.lighting?.preference) {
-    html += `<div class="detail-row"><span class="detail-label">Lighting</span><span class="detail-value">${escapeHtml(profile.lighting.preference)}</span></div>`;
+  if (tech.documentUrl) {
+    html += `<div class="detail-row"><span class="detail-label">Document</span><a href="${escapeHtml(tech.documentUrl)}" target="_blank" class="detail-link">View Tech Rider</a></div>`;
   }
 
   container.innerHTML = html || '<p class="empty-text">No tech specs added</p>';
 }
 
-// Render hospitality section
+// Render hospitality section (SIMPLIFIED)
 function renderHospitalitySection(profile) {
   const container = document.getElementById('hospitality-content');
   if (!container) return;
@@ -919,20 +887,12 @@ function renderHospitalitySection(profile) {
   const hosp = profile.hospitality || {};
   let html = '';
 
-  if (hosp.drinks && hosp.drinks.length > 0) {
-    html += '<div class="detail-row"><span class="detail-label">Drinks</span><span class="detail-value">';
-    html += hosp.drinks.map(d => `${d.quantity || ''}${d.quantity ? '× ' : ''}${d.item}${d.notes ? ` (${d.notes})` : ''}`).join(', ');
-    html += '</span></div>';
+  if (hosp.text) {
+    html += `<div class="section-text">${escapeHtml(hosp.text).replace(/\n/g, '<br>')}</div>`;
   }
 
-  if (hosp.food?.meals) {
-    html += `<div class="detail-row"><span class="detail-label">Food</span><span class="detail-value">${escapeHtml(hosp.food.meals)}${hosp.food.notes ? ` - ${hosp.food.notes}` : ''}</span></div>`;
-  }
-
-  if (hosp.other && hosp.other.length > 0) {
-    hosp.other.forEach(item => {
-      html += `<div class="detail-row"><span class="detail-label">${escapeHtml(item.item)}</span><span class="detail-value">${item.quantity ? `×${item.quantity}` : ''}${item.notes ? ` ${item.notes}` : ''}</span></div>`;
-    });
+  if (hosp.documentUrl) {
+    html += `<div class="detail-row"><span class="detail-label">Document</span><a href="${escapeHtml(hosp.documentUrl)}" target="_blank" class="detail-link">View Hospitality Rider</a></div>`;
   }
 
   container.innerHTML = html || '<p class="empty-text">No hospitality requirements</p>';
@@ -965,7 +925,7 @@ function renderContactsSection(profile) {
   container.innerHTML = html;
 }
 
-// Render documents section
+// Render documents section (SIMPLIFIED)
 function renderDocumentsSection(profile) {
   const container = document.getElementById('documents-content');
   if (!container) return;
@@ -973,20 +933,28 @@ function renderDocumentsSection(profile) {
   const docs = profile.documents || {};
   let html = '';
 
-  if (docs.techRider?.url) {
-    html += `<div class="detail-row"><span class="detail-label">Tech Rider</span><a href="${escapeHtml(docs.techRider.url)}" target="_blank" class="detail-link">View Document</a></div>`;
+  if (docs.techRider) {
+    html += `<div class="detail-row"><span class="detail-label">Tech Rider</span><a href="${escapeHtml(docs.techRider)}" target="_blank" class="detail-link">View</a></div>`;
   }
 
-  if (docs.stageRider?.url) {
-    html += `<div class="detail-row"><span class="detail-label">Stage Rider</span><a href="${escapeHtml(docs.stageRider.url)}" target="_blank" class="detail-link">View Document</a></div>`;
+  if (docs.stageRider) {
+    html += `<div class="detail-row"><span class="detail-label">Stage Plot</span><a href="${escapeHtml(docs.stageRider)}" target="_blank" class="detail-link">View</a></div>`;
   }
 
-  if (docs.pressKit?.url) {
-    html += `<div class="detail-row"><span class="detail-label">Press Kit</span><a href="${escapeHtml(docs.pressKit.url)}" target="_blank" class="detail-link">View Document</a></div>`;
+  if (docs.hospitalityRider) {
+    html += `<div class="detail-row"><span class="detail-label">Hospitality</span><a href="${escapeHtml(docs.hospitalityRider)}" target="_blank" class="detail-link">View</a></div>`;
   }
 
-  if (docs.hospitality?.url) {
-    html += `<div class="detail-row"><span class="detail-label">Hospitality Rider</span><a href="${escapeHtml(docs.hospitality.url)}" target="_blank" class="detail-link">View Document</a></div>`;
+  if (docs.pressKit) {
+    html += `<div class="detail-row"><span class="detail-label">Press Kit</span><a href="${escapeHtml(docs.pressKit)}" target="_blank" class="detail-link">View</a></div>`;
+  }
+
+  if (docs.inputList) {
+    html += `<div class="detail-row"><span class="detail-label">Input List</span><a href="${escapeHtml(docs.inputList)}" target="_blank" class="detail-link">View</a></div>`;
+  }
+
+  if (docs.other) {
+    html += `<div class="detail-row"><span class="detail-label">Other</span><a href="${escapeHtml(docs.other)}" target="_blank" class="detail-link">View</a></div>`;
   }
 
   container.innerHTML = html || '<p class="empty-text">No documents linked</p>';
@@ -1129,97 +1097,59 @@ function populateOrgDropdown() {
   });
 }
 
-// Populate profile form with existing data
+// Populate profile form with existing data (SIMPLIFIED)
 function populateProfileForm(profile) {
   // Basic info
   document.getElementById('edit-artist-name').value = profile.artistName || '';
-  document.getElementById('edit-artist-type').value = profile.type || 'dj';
+  document.getElementById('edit-artist-type').value = profile.type || 'other';
   document.getElementById('edit-crew-size').value = profile.crewSize || '';
   document.getElementById('edit-profile-org').value = profile.organizationId || '';
 
-  // Tech specs
-  const tech = profile.techSpecs || {};
-  document.getElementById('edit-mixer-preferred').value = tech.mixer?.preferred || '';
-  document.getElementById('edit-mixer-quantity').value = tech.mixer?.quantity || '';
-  document.getElementById('edit-cdjs-model').value = tech.cdjs?.model || '';
-  document.getElementById('edit-cdjs-quantity').value = tech.cdjs?.quantity || '';
-  document.getElementById('edit-booth-monitors').value = tech.monitors?.boothMonitors || '';
-  document.getElementById('edit-subwoofers').value = tech.monitors?.subwoofers || '';
-  document.getElementById('edit-mic-model').value = tech.microphone?.model || '';
-  document.getElementById('edit-mic-quantity').value = tech.microphone?.quantity || '';
-  document.getElementById('edit-recording-required').checked = tech.recording?.required || false;
-  document.getElementById('edit-recording-setup').value = tech.recording?.setup || '';
-  document.getElementById('edit-lighting-preference').value = profile.lighting?.preference || '';
-  document.getElementById('edit-lighting-notes').value = profile.lighting?.notes || '';
-
   // Contacts
   const contactsContainer = document.getElementById('contacts-rows');
-  contactsContainer.innerHTML = '';
-  if (profile.contacts && profile.contacts.length > 0) {
-    profile.contacts.forEach(contact => {
-      addContactRow(null, contact);
-    });
-  } else {
-    addContactRow();
+  if (contactsContainer) {
+    contactsContainer.innerHTML = '';
+    if (profile.contacts && profile.contacts.length > 0) {
+      profile.contacts.forEach(contact => addContactRow(null, contact));
+    } else {
+      addContactRow();
+    }
   }
+
+  // Tech specs (simplified)
+  document.getElementById('edit-tech-text').value = profile.techSpecs?.text || '';
+  document.getElementById('edit-tech-doc').value = profile.techSpecs?.documentUrl || '';
+
+  // Stage requirements
+  document.getElementById('edit-stage-text').value = profile.stageRequirements?.text || '';
+  document.getElementById('edit-stage-doc').value = profile.stageRequirements?.documentUrl || '';
 
   // Hospitality
-  const hosp = profile.hospitality || {};
-  const drinksContainer = document.getElementById('drinks-rows');
-  drinksContainer.innerHTML = '';
-  if (hosp.drinks && hosp.drinks.length > 0) {
-    hosp.drinks.forEach(drink => {
-      addDrinkRow(null, drink);
-    });
-  } else {
-    addDrinkRow();
-  }
-
-  document.getElementById('edit-food-meals').value = hosp.food?.meals || '';
-  document.getElementById('edit-food-notes').value = hosp.food?.notes || '';
-
-  const hospOtherContainer = document.getElementById('hosp-other-rows');
-  hospOtherContainer.innerHTML = '';
-  if (hosp.other && hosp.other.length > 0) {
-    hosp.other.forEach(item => {
-      addHospOtherRow(null, item);
-    });
-  }
-
-  // Documents
-  const docs = profile.documents || {};
-  document.getElementById('edit-tech-rider-url').value = docs.techRider?.url || '';
-  document.getElementById('edit-stage-rider-url').value = docs.stageRider?.url || '';
-  document.getElementById('edit-press-kit-url').value = docs.pressKit?.url || '';
-  document.getElementById('edit-hospitality-url').value = docs.hospitality?.url || '';
+  document.getElementById('edit-hospitality-text').value = profile.hospitality?.text || '';
+  document.getElementById('edit-hospitality-doc').value = profile.hospitality?.documentUrl || '';
 
   // Terms
-  const terms = profile.terms || {};
-  document.getElementById('edit-transportation').value = terms.transportation || '';
-  document.getElementById('edit-hotel-requirements').value = terms.hotelRequirements || '';
-  document.getElementById('edit-meals-terms').value = terms.meals || '';
+  document.getElementById('edit-terms-text').value = profile.terms?.text || '';
+  document.getElementById('edit-terms-doc').value = profile.terms?.documentUrl || '';
+
+  // Document links
+  const docs = profile.documents || {};
+  document.getElementById('edit-doc-tech').value = docs.techRider || '';
+  document.getElementById('edit-doc-stage').value = docs.stageRider || '';
+  document.getElementById('edit-doc-hospitality').value = docs.hospitalityRider || '';
+  document.getElementById('edit-doc-press').value = docs.pressKit || '';
+  document.getElementById('edit-doc-other').value = docs.other || '';
 }
 
 // Clear profile form
 function clearProfileForm() {
   document.getElementById('profile-form')?.reset();
 
-  // Reset dynamic rows
+  // Reset contact rows
   const contactsContainer = document.getElementById('contacts-rows');
   if (contactsContainer) {
     contactsContainer.innerHTML = '';
     addContactRow();
-  }
-
-  const drinksContainer = document.getElementById('drinks-rows');
-  if (drinksContainer) {
-    drinksContainer.innerHTML = '';
-    addDrinkRow();
-  }
-
-  const hospOtherContainer = document.getElementById('hosp-other-rows');
-  if (hospOtherContainer) {
-    hospOtherContainer.innerHTML = '';
   }
 }
 
@@ -1243,43 +1173,7 @@ function addContactRow(e, data = {}) {
   container.appendChild(row);
 }
 
-// Add drink row
-function addDrinkRow(e, data = {}) {
-  if (e) e.preventDefault();
-
-  const container = document.getElementById('drinks-rows');
-  if (!container) return;
-
-  const row = document.createElement('div');
-  row.className = 'drink-row';
-  row.innerHTML = `
-    <input type="text" placeholder="Item" class="drink-item-input" value="${escapeHtml(data.item || '')}">
-    <input type="number" placeholder="Qty" class="drink-qty-input" value="${data.quantity || ''}">
-    <input type="text" placeholder="Notes" class="drink-notes-input" value="${escapeHtml(data.notes || '')}">
-    <button type="button" class="btn-remove-row" onclick="this.parentElement.remove()">×</button>
-  `;
-  container.appendChild(row);
-}
-
-// Add hospitality other row
-function addHospOtherRow(e, data = {}) {
-  if (e) e.preventDefault();
-
-  const container = document.getElementById('hosp-other-rows');
-  if (!container) return;
-
-  const row = document.createElement('div');
-  row.className = 'hosp-other-row';
-  row.innerHTML = `
-    <input type="text" placeholder="Item" class="hosp-item-input" value="${escapeHtml(data.item || '')}">
-    <input type="number" placeholder="Qty" class="hosp-qty-input" value="${data.quantity || ''}">
-    <input type="text" placeholder="Notes" class="hosp-notes-input" value="${escapeHtml(data.notes || '')}">
-    <button type="button" class="btn-remove-row" onclick="this.parentElement.remove()">×</button>
-  `;
-  container.appendChild(row);
-}
-
-// Handle save profile
+// Handle save profile (SIMPLIFIED)
 async function handleSaveProfile(e) {
   e.preventDefault();
 
@@ -1289,63 +1183,41 @@ async function handleSaveProfile(e) {
     return;
   }
 
-  // Collect form data
+  // Collect form data (simplified schema)
   const profileData = {
     artistName,
-    type: document.getElementById('edit-artist-type')?.value || 'dj',
+    type: document.getElementById('edit-artist-type')?.value || 'other',
     crewSize: parseInt(document.getElementById('edit-crew-size')?.value) || null,
     organizationId: document.getElementById('edit-profile-org')?.value || null,
 
-    techSpecs: {
-      mixer: {
-        preferred: document.getElementById('edit-mixer-preferred')?.value || '',
-        quantity: parseInt(document.getElementById('edit-mixer-quantity')?.value) || null
-      },
-      cdjs: {
-        model: document.getElementById('edit-cdjs-model')?.value || '',
-        quantity: parseInt(document.getElementById('edit-cdjs-quantity')?.value) || null
-      },
-      monitors: {
-        boothMonitors: document.getElementById('edit-booth-monitors')?.value || '',
-        subwoofers: document.getElementById('edit-subwoofers')?.value || ''
-      },
-      microphone: {
-        model: document.getElementById('edit-mic-model')?.value || '',
-        quantity: parseInt(document.getElementById('edit-mic-quantity')?.value) || null
-      },
-      recording: {
-        required: document.getElementById('edit-recording-required')?.checked || false,
-        setup: document.getElementById('edit-recording-setup')?.value || ''
-      }
-    },
-
-    lighting: {
-      preference: document.getElementById('edit-lighting-preference')?.value || '',
-      notes: document.getElementById('edit-lighting-notes')?.value || ''
-    },
-
     contacts: collectContactRows(),
 
-    hospitality: {
-      drinks: collectDrinkRows(),
-      food: {
-        meals: document.getElementById('edit-food-meals')?.value || '',
-        notes: document.getElementById('edit-food-notes')?.value || ''
-      },
-      other: collectHospOtherRows()
+    techSpecs: {
+      text: document.getElementById('edit-tech-text')?.value || '',
+      documentUrl: document.getElementById('edit-tech-doc')?.value || ''
     },
 
-    documents: {
-      techRider: { url: document.getElementById('edit-tech-rider-url')?.value || '' },
-      stageRider: { url: document.getElementById('edit-stage-rider-url')?.value || '' },
-      pressKit: { url: document.getElementById('edit-press-kit-url')?.value || '' },
-      hospitality: { url: document.getElementById('edit-hospitality-url')?.value || '' }
+    stageRequirements: {
+      text: document.getElementById('edit-stage-text')?.value || '',
+      documentUrl: document.getElementById('edit-stage-doc')?.value || ''
+    },
+
+    hospitality: {
+      text: document.getElementById('edit-hospitality-text')?.value || '',
+      documentUrl: document.getElementById('edit-hospitality-doc')?.value || ''
     },
 
     terms: {
-      transportation: document.getElementById('edit-transportation')?.value || '',
-      hotelRequirements: document.getElementById('edit-hotel-requirements')?.value || '',
-      meals: document.getElementById('edit-meals-terms')?.value || ''
+      text: document.getElementById('edit-terms-text')?.value || '',
+      documentUrl: document.getElementById('edit-terms-doc')?.value || ''
+    },
+
+    documents: {
+      techRider: document.getElementById('edit-doc-tech')?.value || '',
+      stageRider: document.getElementById('edit-doc-stage')?.value || '',
+      hospitalityRider: document.getElementById('edit-doc-hospitality')?.value || '',
+      pressKit: document.getElementById('edit-doc-press')?.value || '',
+      other: document.getElementById('edit-doc-other')?.value || ''
     }
   };
 
@@ -1356,14 +1228,12 @@ async function handleSaveProfile(e) {
 
     let response;
     if (state.editingProfile) {
-      // Update existing
       response = await chrome.runtime.sendMessage({
         type: 'UPDATE_PROFILE',
         profileId: state.editingProfile.id,
         updates: profileData
       });
     } else {
-      // Create new
       const userId = state.userProfile?.id || state.userProfile?.email;
       response = await chrome.runtime.sendMessage({
         type: 'CREATE_PROFILE',
@@ -1407,44 +1277,6 @@ function collectContactRows() {
   });
 
   return contacts;
-}
-
-// Collect drink rows from form
-function collectDrinkRows() {
-  const rows = document.querySelectorAll('#drinks-rows .drink-row');
-  const drinks = [];
-
-  rows.forEach(row => {
-    const item = row.querySelector('.drink-item-input')?.value?.trim();
-    if (item) {
-      drinks.push({
-        item,
-        quantity: parseInt(row.querySelector('.drink-qty-input')?.value) || null,
-        notes: row.querySelector('.drink-notes-input')?.value?.trim() || ''
-      });
-    }
-  });
-
-  return drinks;
-}
-
-// Collect hospitality other rows from form
-function collectHospOtherRows() {
-  const rows = document.querySelectorAll('#hosp-other-rows .hosp-other-row');
-  const items = [];
-
-  rows.forEach(row => {
-    const item = row.querySelector('.hosp-item-input')?.value?.trim();
-    if (item) {
-      items.push({
-        item,
-        quantity: parseInt(row.querySelector('.hosp-qty-input')?.value) || null,
-        notes: row.querySelector('.hosp-notes-input')?.value?.trim() || ''
-      });
-    }
-  });
-
-  return items;
 }
 
 // Handle delete profile

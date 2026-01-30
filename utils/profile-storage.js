@@ -7,9 +7,7 @@ import { STORAGE_KEYS } from '../config/constants.js';
 import {
   createArtistProfile,
   validateProfile,
-  generateTechSpecsSummary,
-  generateHospitalitySummary,
-  generateContactsSummary,
+  generateSectionText,
   generateFullProfileText,
   VISIBILITY
 } from '../models/artist-profile-schema.js';
@@ -156,7 +154,7 @@ export async function deleteProfile(profileId) {
 /**
  * Export a profile section as formatted text
  * @param {string} profileId
- * @param {string} section - 'tech', 'hospitality', 'contacts', 'terms', 'all'
+ * @param {string} section - 'tech', 'hospitality', 'stage', 'terms', 'contacts', 'full'
  * @returns {Promise<string>}
  */
 export async function exportProfileSection(profileId, section) {
@@ -166,43 +164,7 @@ export async function exportProfileSection(profileId, section) {
     throw new Error('Profile not found');
   }
 
-  switch (section) {
-    case 'tech':
-      return profile.techSpecs?.summary || generateTechSpecsSummary(profile);
-
-    case 'hospitality':
-      return profile.hospitality?.summary || generateHospitalitySummary(profile);
-
-    case 'contacts':
-      return generateContactsSummary(profile);
-
-    case 'terms':
-      return formatTerms(profile);
-
-    case 'all':
-    default:
-      return generateFullProfileText(profile);
-  }
-}
-
-/**
- * Format terms section as text
- * @param {Object} profile
- * @returns {string}
- */
-function formatTerms(profile) {
-  const terms = profile.terms;
-  if (!terms) return '';
-
-  const lines = [];
-
-  if (terms.transportation) lines.push(`Transportation: ${terms.transportation}`);
-  if (terms.meals) lines.push(`Meals: ${terms.meals}`);
-  if (terms.hotelRequirements) lines.push(`Hotel: ${terms.hotelRequirements}`);
-  if (terms.cancellationPolicy) lines.push(`Cancellation Policy: ${terms.cancellationPolicy}`);
-  if (terms.securityRequirements) lines.push(`Security: ${terms.securityRequirements}`);
-
-  return lines.join('\n');
+  return generateSectionText(profile, section);
 }
 
 /**
