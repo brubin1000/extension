@@ -4,11 +4,17 @@
 
 // State
 const state = {
-  currentScreen: 'settings', // BARE MINIMUM: Start on settings (only visible tab)
+  currentScreen: 'artists', // Default to artists tab
   events: [],
   contacts: [],
   userProfile: null,
-  selectedEvent: null
+  selectedEvent: null,
+  // Artist Profiles
+  artistProfiles: [],
+  selectedProfile: null,
+  organizations: [],
+  activeOrgId: null, // null = "All" / personal
+  editingProfile: null // null for create, profile object for edit
 };
 
 // DOM Elements
@@ -18,18 +24,17 @@ let elements = {};
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  console.log('[ATMS] Panel init - BARE MINIMUM MODE');
+  console.log('[ATMS] Panel init');
 
   cacheElements();
   setupNavigation();
-  // BARE MINIMUM: Disabled features (hidden tabs)
-  // setupDrawers();
-  // setupFilters();
+  setupProfileDrawers();
+  setupProfileForms();
   setupForms(); // Keep for authenticate button
 
   await loadUserProfile();
-  // BARE MINIMUM: Don't load events/contacts data
-  // await loadData();
+  await loadOrganizations();
+  await loadArtistProfiles();
 
   // Listen for storage changes (sync from Gmail)
   chrome.storage.onChanged.addListener(handleStorageChange);
@@ -39,31 +44,32 @@ async function init() {
     if (message.type === 'AUTH_STATE_CHANGED' && message.authenticated) {
       console.log('[ATMS] Authentication state changed, reloading profile');
       loadUserProfile();
-      // BARE MINIMUM: Don't reload data
-      // loadData();
+      loadOrganizations();
+      loadArtistProfiles();
     }
   });
 
-  showScreen('settings'); // BARE MINIMUM: Show settings screen (only visible tab)
+  showScreen('artists'); // Default to artists screen
 }
 
 function cacheElements() {
   elements = {
     screens: {
-      // BARE MINIMUM: Only settings screen active, others commented out in HTML
-      // overview: document.getElementById('screen-overview'),
-      // contacts: document.getElementById('screen-contacts'),
-      // team: document.getElementById('screen-team'),
+      artists: document.getElementById('screen-artists'),
       settings: document.getElementById('screen-settings')
     },
     tabs: document.querySelectorAll('.tab-item'),
     drawers: {
-      // BARE MINIMUM: Drawers commented out in HTML
-      // newEvent: document.getElementById('drawer-new-event'),
-      // addContact: document.getElementById('drawer-add-contact'),
-      // eventDetail: document.getElementById('drawer-event-detail')
+      profileDetail: document.getElementById('drawer-profile-detail'),
+      profileEditor: document.getElementById('drawer-profile-editor'),
+      orgManager: document.getElementById('drawer-org-manager')
     },
-    backdrop: document.getElementById('drawer-backdrop')
+    backdrop: document.getElementById('drawer-backdrop'),
+    // Artist profile elements
+    orgSelector: document.getElementById('org-selector'),
+    profilesList: document.getElementById('profiles-list'),
+    profilesEmpty: document.getElementById('profiles-empty'),
+    profilesLoading: document.getElementById('profiles-loading')
   };
 }
 
@@ -103,7 +109,7 @@ function setupDrawers() {
 function openDrawer(name) {
   const drawer = elements.drawers[name];
   if (drawer) {
-    drawer.classList.remove('hidden');
+    drawer.classList.add('open');
     elements.backdrop?.classList.remove('hidden');
   }
 }
@@ -111,13 +117,18 @@ function openDrawer(name) {
 function closeDrawer(name) {
   const drawer = elements.drawers[name];
   if (drawer) {
-    drawer.classList.add('hidden');
-    elements.backdrop?.classList.add('hidden');
+    drawer.classList.remove('open');
+    // Only hide backdrop if no other drawers are open
+    const anyOpen = Object.values(elements.drawers).some(d => d?.classList.contains('open'));
+    if (!anyOpen) {
+      elements.backdrop?.classList.add('hidden');
+    }
   }
 }
 
 function closeAllDrawers() {
   Object.keys(elements.drawers).forEach(closeDrawer);
+  elements.backdrop?.classList.add('hidden');
 }
 
 // Data Loading
@@ -592,4 +603,948 @@ function formatTime(timeStr) {
   const ampm = h >= 12 ? 'PM' : 'AM';
   const hour = h % 12 || 12;
   return `${hour}:${minutes} ${ampm}`;
+}
+
+// ==================== ARTIST PROFILES ====================
+
+// Setup profile drawers
+function setupProfileDrawers() {
+  elements.backdrop?.addEventListener('click', closeAllDrawers);
+
+  // Add new profile button
+  const openNewProfileEditor = () => {
+    state.editingProfile = null;
+    clearProfileForm();
+    populateOrgDropdown();
+    document.getElementById('profile-editor-title').textContent = 'New Artist Profile';
+    document.getElementById('btn-delete-profile').style.display = 'none';
+    openDrawer('profileEditor');
+  };
+  document.getElementById('btn-add-profile')?.addEventListener('click', openNewProfileEditor);
+  document.getElementById('btn-add-profile-empty')?.addEventListener('click', openNewProfileEditor);
+
+  // Profile detail drawer
+  document.getElementById('back-profile-detail')?.addEventListener('click', () => closeDrawer('profileDetail'));
+  document.getElementById('btn-edit-profile')?.addEventListener('click', handleEditProfile);
+
+  // Profile editor drawer
+  document.getElementById('back-profile-editor')?.addEventListener('click', () => closeDrawer('profileEditor'));
+  document.getElementById('btn-save-profile')?.addEventListener('click', handleSaveProfile);
+  document.getElementById('btn-delete-profile')?.addEventListener('click', handleDeleteProfile);
+
+  // Organization manager drawer
+  document.getElementById('btn-manage-orgs')?.addEventListener('click', () => {
+    renderOrgManager();
+    openDrawer('orgManager');
+  });
+  document.getElementById('back-org-manager')?.addEventListener('click', () => closeDrawer('orgManager'));
+  document.getElementById('btn-create-org')?.addEventListener('click', handleCreateOrg);
+
+  // Org selector change
+  elements.orgSelector?.addEventListener('change', handleOrgSelectorChange);
+
+  // Copy buttons
+  document.querySelectorAll('.btn-copy').forEach(btn => {
+    btn.addEventListener('click', handleCopySection);
+  });
+
+  // Copy full profile button
+  document.getElementById('btn-copy-all')?.addEventListener('click', handleCopyFullProfile);
+
+  // Autofill button
+  document.getElementById('btn-autofill-form')?.addEventListener('click', handleAutofillForm);
+
+  // Add contact row button
+  document.getElementById('btn-add-contact-row')?.addEventListener('click', addContactRow);
+
+  // Add drink row button
+  document.getElementById('btn-add-drink-row')?.addEventListener('click', addDrinkRow);
+
+  // Add hospitality other row button
+  document.getElementById('btn-add-hosp-other-row')?.addEventListener('click', addHospOtherRow);
+}
+
+// Setup profile form handlers
+function setupProfileForms() {
+  // These are set up in setupProfileDrawers
+}
+
+// Load organizations
+async function loadOrganizations() {
+  try {
+    const userId = state.userProfile?.id || state.userProfile?.email;
+    if (!userId) {
+      console.log('[ATMS] No user ID, skipping org load');
+      return;
+    }
+
+    const response = await chrome.runtime.sendMessage({
+      type: 'GET_USER_ORGANIZATIONS',
+      userId
+    });
+
+    if (response?.success) {
+      state.organizations = response.organizations || [];
+      renderOrgSelector();
+    }
+  } catch (err) {
+    console.error('[ATMS] Failed to load organizations:', err);
+  }
+}
+
+// Load artist profiles
+async function loadArtistProfiles() {
+  try {
+    showProfilesLoading(true);
+
+    const userId = state.userProfile?.id || state.userProfile?.email;
+    const response = await chrome.runtime.sendMessage({
+      type: 'GET_ARTIST_PROFILES',
+      userId,
+      orgId: state.activeOrgId
+    });
+
+    if (response?.success) {
+      state.artistProfiles = response.profiles || [];
+      renderProfiles();
+    } else {
+      console.error('[ATMS] Failed to load profiles:', response?.error);
+    }
+  } catch (err) {
+    console.error('[ATMS] Failed to load profiles:', err);
+  } finally {
+    showProfilesLoading(false);
+  }
+}
+
+// Show/hide profiles loading state
+function showProfilesLoading(show) {
+  if (elements.profilesLoading) {
+    elements.profilesLoading.style.display = show ? 'flex' : 'none';
+  }
+  if (elements.profilesList) {
+    elements.profilesList.style.display = show ? 'none' : 'block';
+  }
+}
+
+// Render organization selector
+function renderOrgSelector() {
+  if (!elements.orgSelector) return;
+
+  // Clear existing options except first two (All, Personal)
+  while (elements.orgSelector.options.length > 2) {
+    elements.orgSelector.remove(2);
+  }
+
+  // Add org options
+  state.organizations.forEach(org => {
+    const option = document.createElement('option');
+    option.value = org.id;
+    option.textContent = org.name;
+    elements.orgSelector.appendChild(option);
+  });
+
+  // Set current value
+  if (state.activeOrgId) {
+    elements.orgSelector.value = state.activeOrgId;
+  }
+}
+
+// Handle org selector change
+function handleOrgSelectorChange(e) {
+  const value = e.target.value;
+  state.activeOrgId = value === '' || value === 'personal' ? null : value;
+
+  // Save preference
+  chrome.runtime.sendMessage({
+    type: 'SET_ACTIVE_ORG',
+    orgId: state.activeOrgId
+  });
+
+  loadArtistProfiles();
+}
+
+// Render profiles list
+function renderProfiles() {
+  if (!elements.profilesList) return;
+
+  // Clear list
+  elements.profilesList.innerHTML = '';
+
+  // Filter based on active org
+  let profiles = state.artistProfiles;
+  if (state.activeOrgId === 'personal') {
+    profiles = profiles.filter(p => !p.organizationId);
+  } else if (state.activeOrgId) {
+    profiles = profiles.filter(p => p.organizationId === state.activeOrgId);
+  }
+
+  // Show empty state if no profiles
+  if (profiles.length === 0) {
+    if (elements.profilesEmpty) {
+      elements.profilesEmpty.style.display = 'flex';
+    }
+    return;
+  }
+
+  if (elements.profilesEmpty) {
+    elements.profilesEmpty.style.display = 'none';
+  }
+
+  // Render profile cards
+  profiles.forEach(profile => {
+    elements.profilesList.appendChild(createProfileCard(profile));
+  });
+}
+
+// Create profile card
+function createProfileCard(profile) {
+  const card = document.createElement('div');
+  card.className = 'profile-card';
+  card.dataset.profileId = profile.id;
+
+  const initials = getInitials(profile.artistName);
+  const typeLabel = formatArtistType(profile.type);
+  const org = profile.organizationId
+    ? state.organizations.find(o => o.id === profile.organizationId)
+    : null;
+
+  card.innerHTML = `
+    <div class="profile-avatar">${initials}</div>
+    <div class="profile-info">
+      <div class="profile-name">${escapeHtml(profile.artistName)}</div>
+      <div class="profile-type">${typeLabel}${profile.crewSize ? ` · ${profile.crewSize} crew` : ''}</div>
+    </div>
+    ${org ? `<span class="org-badge">${escapeHtml(org.name)}</span>` : ''}
+    <div class="profile-arrow">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </div>
+  `;
+
+  card.addEventListener('click', () => showProfileDetail(profile));
+
+  return card;
+}
+
+// Format artist type for display
+function formatArtistType(type) {
+  const types = {
+    dj: 'DJ',
+    live_act: 'Live Act',
+    band: 'Band',
+    solo: 'Solo Artist'
+  };
+  return types[type] || type || 'Artist';
+}
+
+// Show profile detail drawer
+function showProfileDetail(profile) {
+  state.selectedProfile = profile;
+
+  // Update header
+  document.getElementById('profile-detail-name').textContent = profile.artistName || 'Unknown Artist';
+
+  const org = profile.organizationId
+    ? state.organizations.find(o => o.id === profile.organizationId)
+    : null;
+  const orgBadge = document.getElementById('profile-detail-org');
+  if (org && orgBadge) {
+    orgBadge.textContent = org.name;
+    orgBadge.style.display = 'inline-block';
+  } else if (orgBadge) {
+    orgBadge.style.display = 'none';
+  }
+
+  // Render sections
+  renderTechSpecsSection(profile);
+  renderHospitalitySection(profile);
+  renderContactsSection(profile);
+  renderDocumentsSection(profile);
+
+  openDrawer('profileDetail');
+}
+
+// Render tech specs section
+function renderTechSpecsSection(profile) {
+  const container = document.getElementById('tech-specs-content');
+  if (!container) return;
+
+  const tech = profile.techSpecs || {};
+  let html = '';
+
+  if (tech.mixer?.preferred) {
+    html += `<div class="detail-row"><span class="detail-label">Mixer</span><span class="detail-value">${escapeHtml(tech.mixer.preferred)}${tech.mixer.quantity ? ` (×${tech.mixer.quantity})` : ''}</span></div>`;
+  }
+
+  if (tech.cdjs?.model) {
+    html += `<div class="detail-row"><span class="detail-label">CDJs</span><span class="detail-value">${escapeHtml(tech.cdjs.model)}${tech.cdjs.quantity ? ` (×${tech.cdjs.quantity})` : ''}</span></div>`;
+  }
+
+  if (tech.monitors?.boothMonitors) {
+    html += `<div class="detail-row"><span class="detail-label">Booth Monitors</span><span class="detail-value">${escapeHtml(tech.monitors.boothMonitors)}</span></div>`;
+  }
+
+  if (tech.monitors?.subwoofers) {
+    html += `<div class="detail-row"><span class="detail-label">Subwoofers</span><span class="detail-value">${escapeHtml(tech.monitors.subwoofers)}</span></div>`;
+  }
+
+  if (tech.microphone?.model) {
+    html += `<div class="detail-row"><span class="detail-label">Microphone</span><span class="detail-value">${escapeHtml(tech.microphone.model)}${tech.microphone.quantity ? ` (×${tech.microphone.quantity})` : ''}</span></div>`;
+  }
+
+  if (tech.recording?.required) {
+    html += `<div class="detail-row"><span class="detail-label">Recording</span><span class="detail-value">${escapeHtml(tech.recording.setup || 'Required')}</span></div>`;
+  }
+
+  if (tech.other && tech.other.length > 0) {
+    tech.other.forEach(item => {
+      html += `<div class="detail-row"><span class="detail-label">${escapeHtml(item.item)}</span><span class="detail-value">${escapeHtml(item.notes || '')}</span></div>`;
+    });
+  }
+
+  if (profile.lighting?.preference) {
+    html += `<div class="detail-row"><span class="detail-label">Lighting</span><span class="detail-value">${escapeHtml(profile.lighting.preference)}</span></div>`;
+  }
+
+  container.innerHTML = html || '<p class="empty-text">No tech specs added</p>';
+}
+
+// Render hospitality section
+function renderHospitalitySection(profile) {
+  const container = document.getElementById('hospitality-content');
+  if (!container) return;
+
+  const hosp = profile.hospitality || {};
+  let html = '';
+
+  if (hosp.drinks && hosp.drinks.length > 0) {
+    html += '<div class="detail-row"><span class="detail-label">Drinks</span><span class="detail-value">';
+    html += hosp.drinks.map(d => `${d.quantity || ''}${d.quantity ? '× ' : ''}${d.item}${d.notes ? ` (${d.notes})` : ''}`).join(', ');
+    html += '</span></div>';
+  }
+
+  if (hosp.food?.meals) {
+    html += `<div class="detail-row"><span class="detail-label">Food</span><span class="detail-value">${escapeHtml(hosp.food.meals)}${hosp.food.notes ? ` - ${hosp.food.notes}` : ''}</span></div>`;
+  }
+
+  if (hosp.other && hosp.other.length > 0) {
+    hosp.other.forEach(item => {
+      html += `<div class="detail-row"><span class="detail-label">${escapeHtml(item.item)}</span><span class="detail-value">${item.quantity ? `×${item.quantity}` : ''}${item.notes ? ` ${item.notes}` : ''}</span></div>`;
+    });
+  }
+
+  container.innerHTML = html || '<p class="empty-text">No hospitality requirements</p>';
+}
+
+// Render contacts section
+function renderContactsSection(profile) {
+  const container = document.getElementById('contacts-content');
+  if (!container) return;
+
+  const contacts = profile.contacts || [];
+
+  if (contacts.length === 0) {
+    container.innerHTML = '<p class="empty-text">No contacts added</p>';
+    return;
+  }
+
+  let html = '';
+  contacts.forEach(contact => {
+    html += `
+      <div class="contact-item">
+        <div class="contact-name">${escapeHtml(contact.name)}${contact.isPrimary ? ' <span class="primary-badge">Primary</span>' : ''}</div>
+        ${contact.role ? `<div class="contact-role">${escapeHtml(contact.role)}</div>` : ''}
+        ${contact.email ? `<div class="contact-detail">${escapeHtml(contact.email)}</div>` : ''}
+        ${contact.phone ? `<div class="contact-detail">${escapeHtml(contact.phone)}</div>` : ''}
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+// Render documents section
+function renderDocumentsSection(profile) {
+  const container = document.getElementById('documents-content');
+  if (!container) return;
+
+  const docs = profile.documents || {};
+  let html = '';
+
+  if (docs.techRider?.url) {
+    html += `<div class="detail-row"><span class="detail-label">Tech Rider</span><a href="${escapeHtml(docs.techRider.url)}" target="_blank" class="detail-link">View Document</a></div>`;
+  }
+
+  if (docs.stageRider?.url) {
+    html += `<div class="detail-row"><span class="detail-label">Stage Rider</span><a href="${escapeHtml(docs.stageRider.url)}" target="_blank" class="detail-link">View Document</a></div>`;
+  }
+
+  if (docs.pressKit?.url) {
+    html += `<div class="detail-row"><span class="detail-label">Press Kit</span><a href="${escapeHtml(docs.pressKit.url)}" target="_blank" class="detail-link">View Document</a></div>`;
+  }
+
+  if (docs.hospitality?.url) {
+    html += `<div class="detail-row"><span class="detail-label">Hospitality Rider</span><a href="${escapeHtml(docs.hospitality.url)}" target="_blank" class="detail-link">View Document</a></div>`;
+  }
+
+  container.innerHTML = html || '<p class="empty-text">No documents linked</p>';
+}
+
+// Handle copy section button
+async function handleCopySection(e) {
+  const section = e.currentTarget.dataset.section;
+  if (!state.selectedProfile) return;
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'EXPORT_PROFILE_SECTION',
+      profileId: state.selectedProfile.id,
+      section
+    });
+
+    if (response?.success && response.text) {
+      await navigator.clipboard.writeText(response.text);
+      showToast('Copied to clipboard!');
+
+      // Visual feedback on button
+      const btn = e.currentTarget;
+      btn.classList.add('copied');
+      setTimeout(() => btn.classList.remove('copied'), 1500);
+    } else {
+      showToast('Nothing to copy', 'error');
+    }
+  } catch (err) {
+    console.error('[ATMS] Copy failed:', err);
+    showToast('Copy failed', 'error');
+  }
+}
+
+// Handle copy full profile
+async function handleCopyFullProfile() {
+  if (!state.selectedProfile) return;
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'EXPORT_PROFILE_SECTION',
+      profileId: state.selectedProfile.id,
+      section: 'full'
+    });
+
+    if (response?.success && response.text) {
+      await navigator.clipboard.writeText(response.text);
+      showToast('Full profile copied!');
+    } else {
+      showToast('Nothing to copy', 'error');
+    }
+  } catch (err) {
+    console.error('[ATMS] Copy full profile failed:', err);
+    showToast('Copy failed', 'error');
+  }
+}
+
+// Handle autofill form
+async function handleAutofillForm() {
+  if (!state.selectedProfile) return;
+
+  try {
+    // Get the current active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) {
+      showToast('No active tab found', 'error');
+      return;
+    }
+
+    // Send message to content script to autofill
+    const response = await chrome.tabs.sendMessage(tab.id, {
+      type: 'AUTOFILL_PROFILE',
+      profile: state.selectedProfile
+    });
+
+    if (response?.success) {
+      showToast(`Filled ${response.fieldCount || 0} fields`);
+    } else {
+      showToast(response?.error || 'Autofill not available on this page', 'error');
+    }
+  } catch (err) {
+    console.error('[ATMS] Autofill failed:', err);
+    showToast('Autofill not available on this page', 'error');
+  }
+}
+
+// Show toast notification
+function showToast(message, type = 'success') {
+  // Remove existing toast
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  // Trigger animation
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+
+  // Remove after delay
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
+}
+
+// Handle edit profile button
+function handleEditProfile() {
+  if (!state.selectedProfile) return;
+
+  state.editingProfile = state.selectedProfile;
+  document.getElementById('profile-editor-title').textContent = 'Edit Profile';
+  document.getElementById('btn-delete-profile').style.display = 'block';
+
+  populateOrgDropdown();
+  populateProfileForm(state.selectedProfile);
+  closeDrawer('profileDetail');
+  openDrawer('profileEditor');
+}
+
+// Populate organization dropdown in editor
+function populateOrgDropdown() {
+  const dropdown = document.getElementById('edit-profile-org');
+  if (!dropdown) return;
+
+  // Clear existing org options (keep first "Personal" option)
+  while (dropdown.options.length > 1) {
+    dropdown.remove(1);
+  }
+
+  // Add organizations
+  state.organizations.forEach(org => {
+    const option = document.createElement('option');
+    option.value = org.id;
+    option.textContent = org.name;
+    dropdown.appendChild(option);
+  });
+}
+
+// Populate profile form with existing data
+function populateProfileForm(profile) {
+  // Basic info
+  document.getElementById('edit-artist-name').value = profile.artistName || '';
+  document.getElementById('edit-artist-type').value = profile.type || 'dj';
+  document.getElementById('edit-crew-size').value = profile.crewSize || '';
+  document.getElementById('edit-profile-org').value = profile.organizationId || '';
+
+  // Tech specs
+  const tech = profile.techSpecs || {};
+  document.getElementById('edit-mixer-preferred').value = tech.mixer?.preferred || '';
+  document.getElementById('edit-mixer-quantity').value = tech.mixer?.quantity || '';
+  document.getElementById('edit-cdjs-model').value = tech.cdjs?.model || '';
+  document.getElementById('edit-cdjs-quantity').value = tech.cdjs?.quantity || '';
+  document.getElementById('edit-booth-monitors').value = tech.monitors?.boothMonitors || '';
+  document.getElementById('edit-subwoofers').value = tech.monitors?.subwoofers || '';
+  document.getElementById('edit-mic-model').value = tech.microphone?.model || '';
+  document.getElementById('edit-mic-quantity').value = tech.microphone?.quantity || '';
+  document.getElementById('edit-recording-required').checked = tech.recording?.required || false;
+  document.getElementById('edit-recording-setup').value = tech.recording?.setup || '';
+  document.getElementById('edit-lighting-preference').value = profile.lighting?.preference || '';
+  document.getElementById('edit-lighting-notes').value = profile.lighting?.notes || '';
+
+  // Contacts
+  const contactsContainer = document.getElementById('contacts-rows');
+  contactsContainer.innerHTML = '';
+  if (profile.contacts && profile.contacts.length > 0) {
+    profile.contacts.forEach(contact => {
+      addContactRow(null, contact);
+    });
+  } else {
+    addContactRow();
+  }
+
+  // Hospitality
+  const hosp = profile.hospitality || {};
+  const drinksContainer = document.getElementById('drinks-rows');
+  drinksContainer.innerHTML = '';
+  if (hosp.drinks && hosp.drinks.length > 0) {
+    hosp.drinks.forEach(drink => {
+      addDrinkRow(null, drink);
+    });
+  } else {
+    addDrinkRow();
+  }
+
+  document.getElementById('edit-food-meals').value = hosp.food?.meals || '';
+  document.getElementById('edit-food-notes').value = hosp.food?.notes || '';
+
+  const hospOtherContainer = document.getElementById('hosp-other-rows');
+  hospOtherContainer.innerHTML = '';
+  if (hosp.other && hosp.other.length > 0) {
+    hosp.other.forEach(item => {
+      addHospOtherRow(null, item);
+    });
+  }
+
+  // Documents
+  const docs = profile.documents || {};
+  document.getElementById('edit-tech-rider-url').value = docs.techRider?.url || '';
+  document.getElementById('edit-stage-rider-url').value = docs.stageRider?.url || '';
+  document.getElementById('edit-press-kit-url').value = docs.pressKit?.url || '';
+  document.getElementById('edit-hospitality-url').value = docs.hospitality?.url || '';
+
+  // Terms
+  const terms = profile.terms || {};
+  document.getElementById('edit-transportation').value = terms.transportation || '';
+  document.getElementById('edit-hotel-requirements').value = terms.hotelRequirements || '';
+  document.getElementById('edit-meals-terms').value = terms.meals || '';
+}
+
+// Clear profile form
+function clearProfileForm() {
+  document.getElementById('profile-form')?.reset();
+
+  // Reset dynamic rows
+  const contactsContainer = document.getElementById('contacts-rows');
+  if (contactsContainer) {
+    contactsContainer.innerHTML = '';
+    addContactRow();
+  }
+
+  const drinksContainer = document.getElementById('drinks-rows');
+  if (drinksContainer) {
+    drinksContainer.innerHTML = '';
+    addDrinkRow();
+  }
+
+  const hospOtherContainer = document.getElementById('hosp-other-rows');
+  if (hospOtherContainer) {
+    hospOtherContainer.innerHTML = '';
+  }
+}
+
+// Add contact row
+function addContactRow(e, data = {}) {
+  if (e) e.preventDefault();
+
+  const container = document.getElementById('contacts-rows');
+  if (!container) return;
+
+  const row = document.createElement('div');
+  row.className = 'contact-row';
+  row.innerHTML = `
+    <input type="text" placeholder="Name" class="contact-name-input" value="${escapeHtml(data.name || '')}">
+    <input type="email" placeholder="Email" class="contact-email-input" value="${escapeHtml(data.email || '')}">
+    <input type="tel" placeholder="Phone" class="contact-phone-input" value="${escapeHtml(data.phone || '')}">
+    <input type="text" placeholder="Role" class="contact-role-input" value="${escapeHtml(data.role || '')}">
+    <label class="contact-primary-label"><input type="checkbox" class="contact-primary-input" ${data.isPrimary ? 'checked' : ''}> Primary</label>
+    <button type="button" class="btn-remove-row" onclick="this.parentElement.remove()">×</button>
+  `;
+  container.appendChild(row);
+}
+
+// Add drink row
+function addDrinkRow(e, data = {}) {
+  if (e) e.preventDefault();
+
+  const container = document.getElementById('drinks-rows');
+  if (!container) return;
+
+  const row = document.createElement('div');
+  row.className = 'drink-row';
+  row.innerHTML = `
+    <input type="text" placeholder="Item" class="drink-item-input" value="${escapeHtml(data.item || '')}">
+    <input type="number" placeholder="Qty" class="drink-qty-input" value="${data.quantity || ''}">
+    <input type="text" placeholder="Notes" class="drink-notes-input" value="${escapeHtml(data.notes || '')}">
+    <button type="button" class="btn-remove-row" onclick="this.parentElement.remove()">×</button>
+  `;
+  container.appendChild(row);
+}
+
+// Add hospitality other row
+function addHospOtherRow(e, data = {}) {
+  if (e) e.preventDefault();
+
+  const container = document.getElementById('hosp-other-rows');
+  if (!container) return;
+
+  const row = document.createElement('div');
+  row.className = 'hosp-other-row';
+  row.innerHTML = `
+    <input type="text" placeholder="Item" class="hosp-item-input" value="${escapeHtml(data.item || '')}">
+    <input type="number" placeholder="Qty" class="hosp-qty-input" value="${data.quantity || ''}">
+    <input type="text" placeholder="Notes" class="hosp-notes-input" value="${escapeHtml(data.notes || '')}">
+    <button type="button" class="btn-remove-row" onclick="this.parentElement.remove()">×</button>
+  `;
+  container.appendChild(row);
+}
+
+// Handle save profile
+async function handleSaveProfile(e) {
+  e.preventDefault();
+
+  const artistName = document.getElementById('edit-artist-name')?.value?.trim();
+  if (!artistName) {
+    showToast('Artist name is required', 'error');
+    return;
+  }
+
+  // Collect form data
+  const profileData = {
+    artistName,
+    type: document.getElementById('edit-artist-type')?.value || 'dj',
+    crewSize: parseInt(document.getElementById('edit-crew-size')?.value) || null,
+    organizationId: document.getElementById('edit-profile-org')?.value || null,
+
+    techSpecs: {
+      mixer: {
+        preferred: document.getElementById('edit-mixer-preferred')?.value || '',
+        quantity: parseInt(document.getElementById('edit-mixer-quantity')?.value) || null
+      },
+      cdjs: {
+        model: document.getElementById('edit-cdjs-model')?.value || '',
+        quantity: parseInt(document.getElementById('edit-cdjs-quantity')?.value) || null
+      },
+      monitors: {
+        boothMonitors: document.getElementById('edit-booth-monitors')?.value || '',
+        subwoofers: document.getElementById('edit-subwoofers')?.value || ''
+      },
+      microphone: {
+        model: document.getElementById('edit-mic-model')?.value || '',
+        quantity: parseInt(document.getElementById('edit-mic-quantity')?.value) || null
+      },
+      recording: {
+        required: document.getElementById('edit-recording-required')?.checked || false,
+        setup: document.getElementById('edit-recording-setup')?.value || ''
+      }
+    },
+
+    lighting: {
+      preference: document.getElementById('edit-lighting-preference')?.value || '',
+      notes: document.getElementById('edit-lighting-notes')?.value || ''
+    },
+
+    contacts: collectContactRows(),
+
+    hospitality: {
+      drinks: collectDrinkRows(),
+      food: {
+        meals: document.getElementById('edit-food-meals')?.value || '',
+        notes: document.getElementById('edit-food-notes')?.value || ''
+      },
+      other: collectHospOtherRows()
+    },
+
+    documents: {
+      techRider: { url: document.getElementById('edit-tech-rider-url')?.value || '' },
+      stageRider: { url: document.getElementById('edit-stage-rider-url')?.value || '' },
+      pressKit: { url: document.getElementById('edit-press-kit-url')?.value || '' },
+      hospitality: { url: document.getElementById('edit-hospitality-url')?.value || '' }
+    },
+
+    terms: {
+      transportation: document.getElementById('edit-transportation')?.value || '',
+      hotelRequirements: document.getElementById('edit-hotel-requirements')?.value || '',
+      meals: document.getElementById('edit-meals-terms')?.value || ''
+    }
+  };
+
+  try {
+    const btn = document.getElementById('btn-save-profile');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    let response;
+    if (state.editingProfile) {
+      // Update existing
+      response = await chrome.runtime.sendMessage({
+        type: 'UPDATE_PROFILE',
+        profileId: state.editingProfile.id,
+        updates: profileData
+      });
+    } else {
+      // Create new
+      const userId = state.userProfile?.id || state.userProfile?.email;
+      response = await chrome.runtime.sendMessage({
+        type: 'CREATE_PROFILE',
+        profileData: { ...profileData, createdBy: userId }
+      });
+    }
+
+    if (response?.success) {
+      showToast(state.editingProfile ? 'Profile updated!' : 'Profile created!');
+      closeDrawer('profileEditor');
+      await loadArtistProfiles();
+    } else {
+      showToast(response?.error || 'Failed to save profile', 'error');
+    }
+  } catch (err) {
+    console.error('[ATMS] Save profile error:', err);
+    showToast('Failed to save profile', 'error');
+  } finally {
+    const btn = document.getElementById('btn-save-profile');
+    btn.disabled = false;
+    btn.textContent = 'Save Profile';
+  }
+}
+
+// Collect contact rows from form
+function collectContactRows() {
+  const rows = document.querySelectorAll('#contacts-rows .contact-row');
+  const contacts = [];
+
+  rows.forEach(row => {
+    const name = row.querySelector('.contact-name-input')?.value?.trim();
+    if (name) {
+      contacts.push({
+        name,
+        email: row.querySelector('.contact-email-input')?.value?.trim() || '',
+        phone: row.querySelector('.contact-phone-input')?.value?.trim() || '',
+        role: row.querySelector('.contact-role-input')?.value?.trim() || '',
+        isPrimary: row.querySelector('.contact-primary-input')?.checked || false
+      });
+    }
+  });
+
+  return contacts;
+}
+
+// Collect drink rows from form
+function collectDrinkRows() {
+  const rows = document.querySelectorAll('#drinks-rows .drink-row');
+  const drinks = [];
+
+  rows.forEach(row => {
+    const item = row.querySelector('.drink-item-input')?.value?.trim();
+    if (item) {
+      drinks.push({
+        item,
+        quantity: parseInt(row.querySelector('.drink-qty-input')?.value) || null,
+        notes: row.querySelector('.drink-notes-input')?.value?.trim() || ''
+      });
+    }
+  });
+
+  return drinks;
+}
+
+// Collect hospitality other rows from form
+function collectHospOtherRows() {
+  const rows = document.querySelectorAll('#hosp-other-rows .hosp-other-row');
+  const items = [];
+
+  rows.forEach(row => {
+    const item = row.querySelector('.hosp-item-input')?.value?.trim();
+    if (item) {
+      items.push({
+        item,
+        quantity: parseInt(row.querySelector('.hosp-qty-input')?.value) || null,
+        notes: row.querySelector('.hosp-notes-input')?.value?.trim() || ''
+      });
+    }
+  });
+
+  return items;
+}
+
+// Handle delete profile
+async function handleDeleteProfile() {
+  if (!state.editingProfile) return;
+
+  if (!confirm(`Delete "${state.editingProfile.artistName}"? This cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'DELETE_PROFILE',
+      profileId: state.editingProfile.id
+    });
+
+    if (response?.success) {
+      showToast('Profile deleted');
+      closeDrawer('profileEditor');
+      state.editingProfile = null;
+      await loadArtistProfiles();
+    } else {
+      showToast(response?.error || 'Failed to delete', 'error');
+    }
+  } catch (err) {
+    console.error('[ATMS] Delete profile error:', err);
+    showToast('Failed to delete profile', 'error');
+  }
+}
+
+// ==================== ORGANIZATIONS ====================
+
+// Render organization manager
+function renderOrgManager() {
+  const container = document.getElementById('orgs-list');
+  if (!container) return;
+
+  if (state.organizations.length === 0) {
+    container.innerHTML = '<p class="empty-text">No organizations yet</p>';
+    return;
+  }
+
+  let html = '';
+  state.organizations.forEach(org => {
+    const memberCount = org.members?.length || 0;
+    html += `
+      <div class="org-card" data-org-id="${org.id}">
+        <div class="org-info">
+          <div class="org-name">${escapeHtml(org.name)}</div>
+          <div class="org-members">${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="org-actions">
+          <button class="btn-sm btn-view-org" onclick="viewOrgMembers('${org.id}')">View</button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+// View organization members
+window.viewOrgMembers = function(orgId) {
+  const org = state.organizations.find(o => o.id === orgId);
+  if (!org) return;
+
+  let membersList = org.members.map(m =>
+    `${m.displayName || m.email} (${m.role})`
+  ).join('\n');
+
+  alert(`Members of ${org.name}:\n\n${membersList || 'No members'}`);
+};
+
+// Handle create organization
+async function handleCreateOrg() {
+  const name = prompt('Enter organization name:');
+  if (!name?.trim()) return;
+
+  try {
+    const userId = state.userProfile?.id || state.userProfile?.email;
+    const email = state.userProfile?.email || '';
+    const displayName = state.userProfile?.name || '';
+
+    const response = await chrome.runtime.sendMessage({
+      type: 'CREATE_ORGANIZATION',
+      name: name.trim(),
+      userId,
+      email,
+      displayName
+    });
+
+    if (response?.success) {
+      showToast('Organization created!');
+      await loadOrganizations();
+      renderOrgManager();
+    } else {
+      showToast(response?.error || 'Failed to create org', 'error');
+    }
+  } catch (err) {
+    console.error('[ATMS] Create org error:', err);
+    showToast('Failed to create organization', 'error');
+  }
 }

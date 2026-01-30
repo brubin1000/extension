@@ -13,7 +13,73 @@
   <div class="app">
     <main class="main-content">
 
-      <!-- SETTINGS SCREEN - BARE MINIMUM -->
+      <!-- ARTISTS SCREEN -->
+      <section class="screen" id="screen-artists">
+        <header class="page-header">
+          <div class="header-content">
+            <h1 class="page-title">Artists</h1>
+            <p class="page-subtitle">Manage artist profiles</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary btn-sm" id="btn-add-profile">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add
+            </button>
+          </div>
+        </header>
+
+        <!-- Organization Selector -->
+        <div class="org-selector-container">
+          <select class="org-selector" id="org-selector">
+            <option value="">All Profiles</option>
+            <option value="personal">Personal Only</option>
+            <!-- Organizations populated by JS -->
+          </select>
+          <button class="btn btn-ghost btn-sm" id="btn-manage-orgs" title="Manage Organizations">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Profiles List -->
+        <div class="profiles-list" id="profiles-list">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="profiles-empty" style="display: none;">
+          <div class="empty-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <h3>No Artist Profiles</h3>
+          <p>Add an artist profile to store tech riders, hospitality info, and contacts</p>
+          <button class="btn btn-primary" id="btn-add-profile-empty">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Artist Profile
+          </button>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" id="profiles-loading" style="display: none;">
+          <div class="spinner"></div>
+          <p>Loading profiles...</p>
+        </div>
+      </section>
+
+      <!-- SETTINGS SCREEN -->
       <section class="screen active" id="screen-settings">
         <header class="page-header">
           <div class="header-content">
@@ -57,15 +123,419 @@
           </div>
           <div class="settings-section">
             <p class="about-text">ATMS - Artist Tour Management System</p>
-            <p class="version-text">Version 1.0.1</p>
+            <p class="version-text">Version 1.0.2</p>
           </div>
         </div>
       </section>
 
     </main>
 
-    <!-- Bottom Tab Bar - BARE MINIMUM: Only Settings -->
+    <!-- Global Drawer Backdrop -->
+    <div class="drawer-backdrop-global hidden" id="drawer-backdrop"></div>
+
+    <!-- Profile Detail Drawer -->
+    <div class="drawer" id="drawer-profile-detail">
+      <div class="drawer-backdrop" id="backdrop-profile-detail"></div>
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <button class="btn-icon" id="back-profile-detail">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <h2 class="drawer-title" id="profile-detail-name">Artist Name</h2>
+          <button class="btn btn-sm btn-ghost" id="btn-edit-profile">Edit</button>
+        </div>
+        <div class="drawer-body">
+          <!-- Profile Type Badge -->
+          <div class="profile-meta" id="profile-meta">
+            <span class="org-badge" id="profile-detail-org" style="display: none;"></span>
+          </div>
+
+          <!-- Tech Specs Section -->
+          <div class="profile-section">
+            <div class="section-header">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="4" width="16" height="16" rx="2"/>
+                  <circle cx="9" cy="9" r="2"/>
+                  <circle cx="15" cy="9" r="2"/>
+                  <path d="M9 15h6"/>
+                </svg>
+                Tech Specs
+              </h3>
+              <button class="btn-copy" data-section="tech" title="Copy to clipboard">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
+            </div>
+            <div class="section-content" id="tech-specs-content">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Hospitality Section -->
+          <div class="profile-section">
+            <div class="section-header">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                  <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+                  <line x1="6" y1="1" x2="6" y2="4"/>
+                  <line x1="10" y1="1" x2="10" y2="4"/>
+                  <line x1="14" y1="1" x2="14" y2="4"/>
+                </svg>
+                Hospitality
+              </h3>
+              <button class="btn-copy" data-section="hospitality" title="Copy to clipboard">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
+            </div>
+            <div class="section-content" id="hospitality-content">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Contacts Section -->
+          <div class="profile-section">
+            <div class="section-header">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+                Contacts
+              </h3>
+              <button class="btn-copy" data-section="contacts" title="Copy to clipboard">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
+            </div>
+            <div class="section-content" id="contacts-content">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Documents Section -->
+          <div class="profile-section">
+            <div class="section-header">
+              <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                Documents
+              </h3>
+            </div>
+            <div class="section-content" id="documents-content">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Autofill Actions -->
+          <div class="autofill-actions">
+            <button class="btn btn-primary full-width" id="btn-autofill-form">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Autofill Active Form
+            </button>
+            <button class="btn btn-ghost full-width" id="btn-copy-all">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy Full Profile
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Editor Drawer -->
+    <div class="drawer" id="drawer-profile-editor">
+      <div class="drawer-backdrop" id="backdrop-profile-editor"></div>
+      <div class="drawer-content drawer-content-full">
+        <div class="drawer-header">
+          <button class="btn-icon" id="back-profile-editor">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <h2 class="drawer-title" id="profile-editor-title">Add Artist</h2>
+          <button class="btn btn-sm btn-primary" id="btn-save-profile">Save Profile</button>
+        </div>
+        <div class="drawer-body">
+          <form id="profile-form" class="profile-form">
+            <!-- Basic Info -->
+            <div class="form-section">
+              <h4>Basic Info</h4>
+              <div class="form-group">
+                <label for="edit-artist-name">Artist Name *</label>
+                <input type="text" id="edit-artist-name" name="artistName" required placeholder="e.g., INVT">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="edit-artist-type">Type</label>
+                  <select id="edit-artist-type" name="type">
+                    <option value="dj">DJ</option>
+                    <option value="live_act">Live Act</option>
+                    <option value="band">Band</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="edit-crew-size">Crew Size</label>
+                  <input type="number" id="edit-crew-size" name="crewSize" min="0" placeholder="0">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="edit-profile-org">Organization</label>
+                <select id="edit-profile-org" name="organizationId">
+                  <option value="">Personal (Private)</option>
+                  <!-- Populated by JS -->
+                </select>
+              </div>
+            </div>
+
+            <!-- Contacts -->
+            <div class="form-section">
+              <h4>Advance Contacts</h4>
+              <div id="contacts-rows">
+                <!-- Contact rows added by JS -->
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-add-contact-row">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Contact
+              </button>
+            </div>
+
+            <!-- Tech Specs -->
+            <div class="form-section">
+              <h4>Tech Specs</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="edit-mixer-preferred">Mixer</label>
+                  <input type="text" id="edit-mixer-preferred" name="mixer" placeholder="e.g., Pioneer DJM V10">
+                </div>
+                <div class="form-group form-group-sm">
+                  <label for="edit-mixer-quantity">Qty</label>
+                  <input type="number" id="edit-mixer-quantity" name="mixerQty" min="0" placeholder="1">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="edit-cdjs-model">CDJ Model</label>
+                  <input type="text" id="edit-cdjs-model" name="cdjModel" placeholder="e.g., CDJ 2000 NXS2">
+                </div>
+                <div class="form-group form-group-sm">
+                  <label for="edit-cdjs-quantity">Qty</label>
+                  <input type="number" id="edit-cdjs-quantity" name="cdjQty" min="0" placeholder="4">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="edit-booth-monitors">Booth Monitors</label>
+                  <input type="text" id="edit-booth-monitors" name="boothMonitors" placeholder="e.g., 2 monitors">
+                </div>
+                <div class="form-group">
+                  <label for="edit-subwoofers">Subwoofers</label>
+                  <input type="text" id="edit-subwoofers" name="subwoofers" placeholder="e.g., 2 subs">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="edit-mic-model">Microphone</label>
+                  <input type="text" id="edit-mic-model" name="micModel" placeholder="e.g., SM57">
+                </div>
+                <div class="form-group form-group-sm">
+                  <label for="edit-mic-quantity">Qty</label>
+                  <input type="number" id="edit-mic-quantity" name="micQty" min="0" placeholder="1">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="edit-recording-required" name="recordingRequired">
+                  Recording Required
+                </label>
+              </div>
+              <div class="form-group">
+                <label for="edit-recording-setup">Recording Setup</label>
+                <input type="text" id="edit-recording-setup" name="recordingSetup" placeholder="e.g., USB recording from mixer">
+              </div>
+            </div>
+
+            <!-- Lighting -->
+            <div class="form-section">
+              <h4>Lighting</h4>
+              <div class="form-group">
+                <label for="edit-lighting-preference">Lighting Preference</label>
+                <input type="text" id="edit-lighting-preference" name="lighting" placeholder="e.g., Dark/minimal">
+              </div>
+              <div class="form-group">
+                <label for="edit-lighting-notes">Lighting Notes</label>
+                <textarea id="edit-lighting-notes" name="lightingNotes" rows="2" placeholder="e.g., No strobes on stage"></textarea>
+              </div>
+            </div>
+
+            <!-- Hospitality -->
+            <div class="form-section">
+              <h4>Hospitality - Drinks</h4>
+              <div id="drinks-rows">
+                <!-- Drink rows added by JS -->
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-add-drink-row">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Drink
+              </button>
+            </div>
+
+            <div class="form-section">
+              <h4>Hospitality - Food</h4>
+              <div class="form-group">
+                <label for="edit-food-meals">Meals</label>
+                <input type="text" id="edit-food-meals" name="meals" placeholder="e.g., 1 meal per performer">
+              </div>
+              <div class="form-group">
+                <label for="edit-food-notes">Food Notes</label>
+                <textarea id="edit-food-notes" name="foodNotes" rows="2" placeholder="e.g., Dietary restrictions"></textarea>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Hospitality - Other</h4>
+              <div id="hosp-other-rows">
+                <!-- Other hospitality rows added by JS -->
+              </div>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-add-hosp-other-row">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Item
+              </button>
+            </div>
+
+            <!-- Terms -->
+            <div class="form-section">
+              <h4>Terms</h4>
+              <div class="form-group">
+                <label for="edit-transportation">Transportation</label>
+                <input type="text" id="edit-transportation" name="transportation" placeholder="e.g., Ground transportation covered">
+              </div>
+              <div class="form-group">
+                <label for="edit-hotel-requirements">Hotel Requirements</label>
+                <input type="text" id="edit-hotel-requirements" name="hotelRequirements" placeholder="e.g., Within 20 min of venue">
+              </div>
+              <div class="form-group">
+                <label for="edit-meals-terms">Meals Terms</label>
+                <input type="text" id="edit-meals-terms" name="mealsTerms" placeholder="e.g., Meal buyout $50/person">
+              </div>
+            </div>
+
+            <!-- Documents -->
+            <div class="form-section">
+              <h4>Document Links</h4>
+              <div class="form-group">
+                <label for="edit-tech-rider-url">Tech Rider URL</label>
+                <input type="url" id="edit-tech-rider-url" name="techRiderUrl" placeholder="https://drive.google.com/...">
+              </div>
+              <div class="form-group">
+                <label for="edit-stage-rider-url">Stage Rider URL</label>
+                <input type="url" id="edit-stage-rider-url" name="stageRiderUrl" placeholder="https://drive.google.com/...">
+              </div>
+              <div class="form-group">
+                <label for="edit-press-kit-url">Press Kit URL</label>
+                <input type="url" id="edit-press-kit-url" name="pressKitUrl" placeholder="https://drive.google.com/...">
+              </div>
+              <div class="form-group">
+                <label for="edit-hospitality-url">Hospitality Rider URL</label>
+                <input type="url" id="edit-hospitality-url" name="hospitalityUrl" placeholder="https://drive.google.com/...">
+              </div>
+            </div>
+
+            <!-- Delete Button (only for editing) -->
+            <div class="form-section form-section-danger">
+              <button type="button" class="btn btn-danger full-width" id="btn-delete-profile" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                Delete Profile
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Organization Manager Drawer -->
+    <div class="drawer" id="drawer-org-manager">
+      <div class="drawer-backdrop" id="backdrop-org-manager"></div>
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <button class="btn-icon" id="back-org-manager">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <h2 class="drawer-title">Organizations</h2>
+          <button class="btn btn-sm btn-primary" id="btn-create-org">New</button>
+        </div>
+        <div class="drawer-body">
+          <!-- Organizations List -->
+          <div class="orgs-list" id="orgs-list">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Empty State -->
+          <div class="empty-state" id="orgs-empty" style="display: none;">
+            <h3>No Organizations</h3>
+            <p>Create an organization to share artist profiles with your team</p>
+          </div>
+
+          <!-- Create Org Form (hidden by default) -->
+          <div class="card" id="create-org-form" style="display: none;">
+            <div class="card-header">
+              <span>Create Organization</span>
+            </div>
+            <div class="form-group" style="padding: 12px;">
+              <input type="text" id="input-org-name" placeholder="Organization name" style="margin-bottom: 12px;">
+              <div class="form-row">
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-cancel-create-org">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-create-org">Create</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Tab Bar -->
     <nav class="tab-bar">
+      <button class="tab-item" data-screen="artists">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Artists</span>
+      </button>
       <button class="tab-item active" data-screen="settings">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/>

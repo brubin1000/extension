@@ -34,6 +34,17 @@
         "content/gmail-inject.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://docs.google.com/forms/*",
+        "https://*.mastertour.com/*",
+        "<all_urls>"
+      ],
+      "js": [
+        "content/autofill-inject.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "side_panel": {

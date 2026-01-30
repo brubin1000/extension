@@ -32,7 +32,15 @@ export const STORAGE_KEYS = {
   REALM_USER_ID: 'realmUserId',
   LAST_POLL_TIME: 'lastPollTime',
   EXTENSION_ENABLED: 'extensionEnabled',
-  CURRENT_EMAIL_DATA: 'currentEmailData'
+  CURRENT_EMAIL_DATA: 'currentEmailData',
+
+  // Artist Profiles
+  ARTIST_PROFILES: 'atmsArtistProfiles',
+  ACTIVE_PROFILE_ID: 'atmsActiveProfileId',
+
+  // Organizations
+  ORGANIZATIONS: 'atmsOrganizations',
+  ACTIVE_ORG_ID: 'atmsActiveOrgId'
 };
 
 // ============= ALARM NAMES =============

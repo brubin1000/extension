@@ -13,6 +13,35 @@ import { syncEventWithRetry, updateEventSyncStatus, getEvents, getEventParticipa
 import { createEvent } from '../models/event-schema.js';
 import { syncToEmailParser, syncToATMS, syncLocalStorageWithBackend, getEmailsFromParser, getEventsFromATMS } from './email-parser-sync.js';
 
+// Artist Profiles
+import {
+  getAllProfiles,
+  getProfilesByOrg,
+  getProfileById,
+  createProfile,
+  updateProfile,
+  deleteProfile,
+  exportProfileSection,
+  getActiveProfileId,
+  setActiveProfileId,
+  getActiveOrgId,
+  setActiveOrgId
+} from '../utils/profile-storage.js';
+
+// Organizations
+import {
+  getUserOrganizations,
+  getUserOrgIds,
+  getOrganizationById,
+  createNewOrganization,
+  updateOrganization,
+  deleteOrganization,
+  addMember,
+  removeMember,
+  updateMemberRole,
+  linkUserToMemberships
+} from '../utils/organization-storage.js';
+
 /**
  * Extension installed/updated
  */
@@ -1235,6 +1264,293 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
           break;
 
+        // ============= ARTIST PROFILE HANDLERS =============
+
+        case 'GET_ARTIST_PROFILES':
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated', profiles: [] });
+              break;
+            }
+
+            const userId = await getGoogleUserId();
+            const userOrgIds = await getUserOrgIds(userId);
+            const orgId = message.orgId; // Optional filter by org
+
+            let profiles;
+            if (orgId !== undefined) {
+              profiles = await getProfilesByOrg(userId, orgId, userOrgIds);
+            } else {
+              profiles = await getAllProfiles(userId, userOrgIds);
+            }
+
+            sendResponse({ success: true, profiles });
+          } catch (err) {
+            logError('Get profiles error:', err);
+            sendResponse({ success: false, error: err.message, profiles: [] });
+          }
+          break;
+
+        case 'GET_PROFILE_BY_ID':
+          try {
+            const profile = await getProfileById(message.profileId);
+            sendResponse({ success: true, profile });
+          } catch (err) {
+            logError('Get profile error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'CREATE_PROFILE':
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated' });
+              break;
+            }
+
+            const userId = await getGoogleUserId();
+            const profileData = { ...message.profileData, createdBy: userId };
+            const newProfile = await createProfile(profileData);
+
+            info('Profile created:', newProfile.artistName);
+            sendResponse({ success: true, profile: newProfile });
+          } catch (err) {
+            logError('Create profile error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'UPDATE_PROFILE':
+          try {
+            const updatedProfile = await updateProfile(message.profileId, message.updates);
+            info('Profile updated:', updatedProfile.artistName);
+            sendResponse({ success: true, profile: updatedProfile });
+          } catch (err) {
+            logError('Update profile error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'DELETE_PROFILE':
+          try {
+            const deleted = await deleteProfile(message.profileId);
+            info('Profile deleted:', message.profileId);
+            sendResponse({ success: deleted });
+          } catch (err) {
+            logError('Delete profile error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'EXPORT_PROFILE_SECTION':
+          try {
+            const text = await exportProfileSection(message.profileId, message.section);
+            sendResponse({ success: true, text });
+          } catch (err) {
+            logError('Export section error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'GET_ACTIVE_PROFILE':
+          try {
+            const activeId = await getActiveProfileId();
+            const activeProfile = activeId ? await getProfileById(activeId) : null;
+            sendResponse({ success: true, profile: activeProfile, profileId: activeId });
+          } catch (err) {
+            logError('Get active profile error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'SET_ACTIVE_PROFILE':
+          try {
+            await setActiveProfileId(message.profileId);
+            sendResponse({ success: true });
+          } catch (err) {
+            logError('Set active profile error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        // ============= ORGANIZATION HANDLERS =============
+
+        case 'GET_USER_ORGANIZATIONS':
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated', organizations: [] });
+              break;
+            }
+
+            const userId = await getGoogleUserId();
+            const organizations = await getUserOrganizations(userId);
+            sendResponse({ success: true, organizations });
+          } catch (err) {
+            logError('Get organizations error:', err);
+            sendResponse({ success: false, error: err.message, organizations: [] });
+          }
+          break;
+
+        case 'GET_ORGANIZATION_BY_ID':
+          try {
+            const org = await getOrganizationById(message.orgId);
+            sendResponse({ success: true, organization: org });
+          } catch (err) {
+            logError('Get organization error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'CREATE_ORGANIZATION':
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated' });
+              break;
+            }
+
+            const userId = await getGoogleUserId();
+
+            // Get user profile for email/name
+            const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+              headers: { 'Authorization': `Bearer ${auth.googleToken}` }
+            });
+            const userProfile = profileResponse.ok ? await profileResponse.json() : {};
+
+            const newOrg = await createNewOrganization(
+              message.name,
+              userId,
+              userProfile.email || '',
+              userProfile.name || ''
+            );
+
+            info('Organization created:', newOrg.name);
+            sendResponse({ success: true, organization: newOrg });
+          } catch (err) {
+            logError('Create organization error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'UPDATE_ORGANIZATION':
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated' });
+              break;
+            }
+
+            const userId = await getGoogleUserId();
+            const updatedOrg = await updateOrganization(message.orgId, message.updates, userId);
+            info('Organization updated:', updatedOrg.name);
+            sendResponse({ success: true, organization: updatedOrg });
+          } catch (err) {
+            logError('Update organization error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'DELETE_ORGANIZATION':
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated' });
+              break;
+            }
+
+            const userId = await getGoogleUserId();
+            const deleted = await deleteOrganization(message.orgId, userId);
+            info('Organization deleted:', message.orgId);
+            sendResponse({ success: deleted });
+          } catch (err) {
+            logError('Delete organization error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'ADD_ORG_MEMBER':
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated' });
+              break;
+            }
+
+            const userId = await getGoogleUserId();
+            const updatedOrg = await addMember(message.orgId, message.memberData, userId);
+            info('Member added to organization:', message.memberData.email);
+            sendResponse({ success: true, organization: updatedOrg });
+          } catch (err) {
+            logError('Add member error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'REMOVE_ORG_MEMBER':
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated' });
+              break;
+            }
+
+            const userId = await getGoogleUserId();
+            const updatedOrg = await removeMember(message.orgId, message.memberId, userId);
+            info('Member removed from organization');
+            sendResponse({ success: true, organization: updatedOrg });
+          } catch (err) {
+            logError('Remove member error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'UPDATE_MEMBER_ROLE':
+          try {
+            const auth = await ensureAuthenticated();
+            if (!auth.success) {
+              sendResponse({ success: false, error: 'Not authenticated' });
+              break;
+            }
+
+            const userId = await getGoogleUserId();
+            const updatedOrg = await updateMemberRole(
+              message.orgId,
+              message.memberId,
+              message.newRole,
+              userId
+            );
+            info('Member role updated');
+            sendResponse({ success: true, organization: updatedOrg });
+          } catch (err) {
+            logError('Update member role error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'GET_ACTIVE_ORG':
+          try {
+            const activeOrgId = await getActiveOrgId();
+            const activeOrg = activeOrgId ? await getOrganizationById(activeOrgId) : null;
+            sendResponse({ success: true, organization: activeOrg, orgId: activeOrgId });
+          } catch (err) {
+            logError('Get active org error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
+        case 'SET_ACTIVE_ORG':
+          try {
+            await setActiveOrgId(message.orgId);
+            sendResponse({ success: true });
+          } catch (err) {
+            logError('Set active org error:', err);
+            sendResponse({ success: false, error: err.message });
+          }
+          break;
+
         default:
           sendResponse({ success: false, error: 'Unknown action' });
       }
@@ -1243,7 +1559,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: false, error: err.message });
     }
   })();
-  
+
   return true; // Keep message channel open for async response
 });
 
