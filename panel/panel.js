@@ -4,7 +4,7 @@
 
 // State
 const state = {
-  currentScreen: 'overview',
+  currentScreen: 'settings', // BARE MINIMUM: Start on settings (only visible tab)
   events: [],
   contacts: [],
   userProfile: null,
@@ -18,17 +18,19 @@ let elements = {};
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  console.log('[ATMS] Panel init');
-  
+  console.log('[ATMS] Panel init - BARE MINIMUM MODE');
+
   cacheElements();
   setupNavigation();
-  setupDrawers();
-  setupFilters();
-  setupForms();
-  
+  // BARE MINIMUM: Disabled features (hidden tabs)
+  // setupDrawers();
+  // setupFilters();
+  setupForms(); // Keep for authenticate button
+
   await loadUserProfile();
-  await loadData();
-  
+  // BARE MINIMUM: Don't load events/contacts data
+  // await loadData();
+
   // Listen for storage changes (sync from Gmail)
   chrome.storage.onChanged.addListener(handleStorageChange);
 
@@ -37,26 +39,29 @@ async function init() {
     if (message.type === 'AUTH_STATE_CHANGED' && message.authenticated) {
       console.log('[ATMS] Authentication state changed, reloading profile');
       loadUserProfile();
-      loadData();
+      // BARE MINIMUM: Don't reload data
+      // loadData();
     }
   });
 
-  showScreen('overview');
+  showScreen('settings'); // BARE MINIMUM: Show settings screen (only visible tab)
 }
 
 function cacheElements() {
   elements = {
     screens: {
-      overview: document.getElementById('screen-overview'),
-      contacts: document.getElementById('screen-contacts'),
-      team: document.getElementById('screen-team'),
+      // BARE MINIMUM: Only settings screen active, others commented out in HTML
+      // overview: document.getElementById('screen-overview'),
+      // contacts: document.getElementById('screen-contacts'),
+      // team: document.getElementById('screen-team'),
       settings: document.getElementById('screen-settings')
     },
     tabs: document.querySelectorAll('.tab-item'),
     drawers: {
-      newEvent: document.getElementById('drawer-new-event'),
-      addContact: document.getElementById('drawer-add-contact'),
-      eventDetail: document.getElementById('drawer-event-detail')
+      // BARE MINIMUM: Drawers commented out in HTML
+      // newEvent: document.getElementById('drawer-new-event'),
+      // addContact: document.getElementById('drawer-add-contact'),
+      // eventDetail: document.getElementById('drawer-event-detail')
     },
     backdrop: document.getElementById('drawer-backdrop')
   };
@@ -211,14 +216,15 @@ async function loadContacts() {
 // Handle storage changes (sync from Gmail inline UI)
 function handleStorageChange(changes, area) {
   if (area === 'local') {
+    // BARE MINIMUM: Don't render events/contacts (those screens are hidden)
     if (changes.atmsEvents) {
       state.events = changes.atmsEvents.newValue || [];
-      renderEvents();
-      updateEventCounts();
+      // renderEvents();
+      // updateEventCounts();
     }
     if (changes.atmsContacts) {
       state.contacts = changes.atmsContacts.newValue || [];
-      renderContacts();
+      // renderContacts();
     }
   }
 }

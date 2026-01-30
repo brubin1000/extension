@@ -37,8 +37,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       // Show notification to prompt user setup
       if (details.reason === 'install') {
         chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
           type: 'basic',
-          iconUrl: 'icons/icon48.png',
           title: 'Email Calendar Agent Installed',
           message: 'Please click the extension icon to complete setup.'
         });
@@ -387,8 +387,8 @@ async function processSingleEmail(email, googleToken, userId) {
     // Show error notification if enabled
     if (NOTIFICATIONS.ENABLED && NOTIFICATIONS.SHOW_ON_ERROR) {
       chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
         type: 'basic',
-        iconUrl: 'icons/icon48.png',
         title: 'Email Calendar Agent - Error',
         message: `Failed to process email: ${err.message}`
       });
@@ -414,8 +414,8 @@ function showEventCreatedNotification(title, startDateTime) {
   });
   
   chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
     type: 'basic',
-    iconUrl: 'icons/icon48.png',
     title: 'Event Added to Calendar',
     message: `${title}\n${dateStr}`
   });
@@ -435,26 +435,53 @@ function buildEventDescription(eventData) {
     sections.push('\n' + '─'.repeat(50) + '\n');
   }
 
-  // SET INFORMATION (Primary performance details)
+  // FULL LINEUP (All stages and all sets)
   if (eventData.extractedData?.stages && eventData.extractedData.stages.length > 0) {
-    const stage = eventData.extractedData.stages[0];
-    if (stage.sets && stage.sets.length > 0) {
-      const set = stage.sets[0];
-      sections.push('🎵 SET INFORMATION');
-      if (stage.stage_name) sections.push(`Stage: ${stage.stage_name}`);
-      if (set.set_date) sections.push(`Date: ${set.set_date}`);
-      if (set.start_time && set.end_time) {
-        sections.push(`Time: ${set.start_time} - ${set.end_time}`);
-      } else if (set.start_time) {
-        sections.push(`Start Time: ${set.start_time}`);
+    sections.push('🎵 FULL LINEUP');
+
+    eventData.extractedData.stages.forEach(stage => {
+      if (stage.sets && stage.sets.length > 0) {
+        // Stage header
+        if (stage.stage_name) {
+          sections.push(`\n${stage.stage_name.toUpperCase()}`);
+          if (stage.technical_notes) {
+            sections.push(`Tech: ${stage.technical_notes}`);
+          }
+        }
+
+        // All sets for this stage
+        stage.sets.forEach(set => {
+          let setLine = '';
+
+          // Time range
+          if (set.start_time && set.end_time) {
+            setLine = `${set.start_time} - ${set.end_time}`;
+          } else if (set.start_time) {
+            setLine = `${set.start_time}`;
+          }
+
+          // Artist name
+          if (set.artist_name) {
+            setLine += setLine ? ` • ${set.artist_name}` : set.artist_name;
+          }
+
+          // Set name (if different from artist name)
+          if (set.set_name && set.set_name !== set.artist_name) {
+            setLine += ` (${set.set_name})`;
+          }
+
+          if (setLine) sections.push(`  ${setLine}`);
+
+          // Additional set details (indented)
+          if (set.soundcheck_time) sections.push(`    Soundcheck: ${set.soundcheck_time}`);
+          if (set.crew_list) sections.push(`    Crew: ${set.crew_list}`);
+          if (set.guest_list_spots) sections.push(`    Guest List: ${set.guest_list_spots} spots`);
+          if (set.hospitality_notes) sections.push(`    Hospitality: ${set.hospitality_notes}`);
+        });
       }
-      if (set.soundcheck_time) sections.push(`Soundcheck: ${set.soundcheck_time}`);
-      if (set.crew_list) sections.push(`Crew: ${set.crew_list}`);
-      if (set.guest_list_spots) sections.push(`Guest List: ${set.guest_list_spots} spots`);
-      if (set.technical_notes) sections.push(`Tech Notes: ${set.technical_notes}`);
-      if (set.hospitality_notes) sections.push(`Hospitality: ${set.hospitality_notes}`);
-      sections.push('');
-    }
+    });
+
+    sections.push('');
   }
 
   // VENUE INFORMATION
@@ -570,8 +597,8 @@ chrome.action.onClicked.addListener(async () => {
     if (!setupComplete) {
       // Trigger interactive authentication
       chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
         type: 'basic',
-        iconUrl: 'icons/icon48.png',
         title: 'Setup Required',
         message: 'Starting authentication flow...'
       });
@@ -580,8 +607,8 @@ chrome.action.onClicked.addListener(async () => {
       
       if (result.success) {
         chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
           type: 'basic',
-          iconUrl: 'icons/icon48.png',
           title: 'Setup Complete',
           message: 'Extension is now running. Will check emails every 5 minutes.'
         });
@@ -595,8 +622,8 @@ chrome.action.onClicked.addListener(async () => {
         });
       } else {
         chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
           type: 'basic',
-          iconUrl: 'icons/icon48.png',
           title: 'Setup Failed',
           message: `Error: ${result.error}`
         });
@@ -604,8 +631,8 @@ chrome.action.onClicked.addListener(async () => {
     } else {
       // Trigger manual sync
       chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
         type: 'basic',
-        iconUrl: 'icons/icon48.png',
         title: 'Manual Sync',
         message: 'Checking for new emails...'
       });
@@ -613,8 +640,8 @@ chrome.action.onClicked.addListener(async () => {
       await processNewEmails();
       
       chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
         type: 'basic',
-        iconUrl: 'icons/icon48.png',
         title: 'Sync Complete',
         message: 'Finished checking emails'
       });
@@ -623,8 +650,8 @@ chrome.action.onClicked.addListener(async () => {
     logError('Error handling icon click', err);
     
     chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
       type: 'basic',
-      iconUrl: 'icons/icon48.png',
       title: 'Error',
       message: err.message
     });
@@ -951,38 +978,78 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (!auth.success) {
               throw new Error('Not authenticated');
             }
-            
+
             const { eventData } = message;
-            
-            // Parse date for all-day event
-            const dateStr = eventData.date || new Date().toISOString().split('T')[0];
-
-            // Calculate end date (next day for all-day events)
-            const [year, month, day] = dateStr.split('-').map(Number);
-            const startDate = new Date(year, month - 1, day);
-            const endDate = new Date(year, month - 1, day + 1);
-
-            const formatDateForAllDay = (date) => {
-              const y = date.getFullYear();
-              const m = String(date.getMonth() + 1).padStart(2, '0');
-              const d = String(date.getDate()).padStart(2, '0');
-              return `${y}-${m}-${d}`;
-            };
 
             // Build comprehensive description from all extracted data
             const description = buildEventDescription(eventData);
+
+            // Determine timezone from extracted data or use default
+            // Convert common abbreviations to IANA timezone format
+            let rawTimezone = eventData.extractedData?.dates?.timezone || 'America/Los_Angeles';
+            const timezoneMap = {
+              'PST': 'America/Los_Angeles',
+              'PDT': 'America/Los_Angeles',
+              'EST': 'America/New_York',
+              'EDT': 'America/New_York',
+              'CST': 'America/Chicago',
+              'CDT': 'America/Chicago',
+              'MST': 'America/Denver',
+              'MDT': 'America/Denver'
+            };
+            const timezone = timezoneMap[rawTimezone] || rawTimezone;
+
+            // Parse date and time for timed event
+            const dateStr = eventData.date || new Date().toISOString().split('T')[0];
+            const timeStr = eventData.time || '10:00';
+            const duration = eventData.duration || 60; // minutes
+
+            info(`Creating timed event: ${dateStr} ${timeStr} (${duration} min) in ${timezone}`);
+
+            // Parse start date/time
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const [hour, minute] = timeStr.split(':').map(Number);
+
+            // Create date object for start time
+            const startDate = new Date(year, month - 1, day, hour, minute, 0);
+
+            // Calculate end time (add duration) - handles sets crossing midnight
+            const endDate = new Date(startDate.getTime() + duration * 60000);
+
+            // Format dates for Calendar API (local time, not UTC)
+            const formatDateTime = (d) => {
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              const da = String(d.getDate()).padStart(2, '0');
+              const h = String(d.getHours()).padStart(2, '0');
+              const min = String(d.getMinutes()).padStart(2, '0');
+              const s = String(d.getSeconds()).padStart(2, '0');
+              return `${y}-${m}-${da}T${h}:${min}:${s}`;
+            };
+
+            const startDateTime = formatDateTime(startDate);
+            const endDateTime = formatDateTime(endDate);
 
             const calendarEvent = {
               summary: eventData.title || 'New Event',
               description: description,
               location: eventData.location || undefined,
               start: {
-                date: formatDateForAllDay(startDate)
+                dateTime: startDateTime,
+                timeZone: timezone
               },
               end: {
-                date: formatDateForAllDay(endDate)
+                dateTime: endDateTime,
+                timeZone: timezone
               },
-              attendees: eventData.attendees?.map(email => ({ email })) || []
+              attendees: eventData.attendees?.map(email => ({ email })) || [],
+              reminders: {
+                useDefault: false,
+                overrides: [
+                  { method: 'popup', minutes: 1440 }, // 1 day before
+                  { method: 'popup', minutes: 60 }     // 1 hour before
+                ]
+              }
             };
             
             info('Creating calendar event:', calendarEvent.summary);
@@ -1217,8 +1284,8 @@ async function toggleEnabled() {
     info(`Extension ${newState ? 'enabled' : 'disabled'}`);
     
     chrome.notifications.create({
+          iconUrl: chrome.runtime.getURL("icons/icon48.png"),
       type: 'basic',
-      iconUrl: 'icons/icon48.png',
       title: 'Email Calendar Agent',
       message: `Extension ${newState ? 'enabled' : 'disabled'}`
     });

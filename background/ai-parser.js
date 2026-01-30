@@ -253,7 +253,8 @@ organizer: {name, email, phone}
 
 stages: Array - CRITICAL: Extract the COMPLETE LINEUP for each stage/room. If the email has a "ROS" (Rest of Schedule), "SET TIMES", or "LINEUP" section, extract ALL artists listed, not just the primary artist. Create one set object for EACH artist performing. If the email mentions different rooms or stages (like "Main Room", "bionicJUNGLE stage", "Lounge"), create separate stage objects for each. Each stage has:
 - stage_name (e.g., "bionicJUNGLE", "Main Stage", "Arena", or just the venue name if no stage specified)
-- sets: [{ // ONE SET OBJECT PER ARTIST - Extract ALL artists from ROS/lineup/set times section
+- technical_notes: "STAGE-LEVEL gear/equipment (e.g., '4 CDJs 3000, 1 DJM900NXS2'). Extract from TECHNICAL INFO section. One entry per stage."
+- sets: [{ // ONE SET OBJECT PER ARTIST - Extract ALL artists from ROS/lineup/set times section. KEEP IT CONCISE - only include fields that differ per set
     artist_name, set_name,
     set_date (YYYY-MM-DD),
     start_time (HH:MM in 24hr format),
@@ -261,13 +262,8 @@ stages: Array - CRITICAL: Extract the COMPLETE LINEUP for each stage/room. If th
     soundcheck_time,
     crew_list: "text like 'DJ + 2'",
     guest_list_spots: number,
-    ticket_link: "url",
-    venue_information: {venue_name, venue_address, venue_contact_name, venue_contact_email, venue_contact_phone, venue_notes, booking_notes},
-    technical_notes: "IMPORTANT: Extract gear specs for THIS stage/room (e.g., '4 CDJs 3000, 1 DJM900NXS2')",
     hospo_tech_rider_confirmed: "yes/no/pending/n/a",
-    hospitality_notes: "green room, catering, etc",
-    logistics: {hotel_information, ground_transportation},
-    production_pack_links: [{url, description: "label what the link is for"}],
+    hospitality_notes: "ONLY if specific to THIS artist (green room, catering, etc)",
     status: "scheduled/confirmed/cancelled"
   }]
 
@@ -315,6 +311,7 @@ CRITICAL NOTES:
 - Return a FLAT JSON structure with top-level fields (event_name, status, venue, dates, stages, contacts, etc.)
 - DO NOT nest fields under section headers like "core_event_info" or "stages_and_sets"
 - **EXTRACT THE FULL LINEUP - MOST IMPORTANT**: Look for sections titled "ROS" (Rest of Schedule), "SET TIMES", "LINEUP", or any list of artist names with times. Extract EVERY SINGLE ARTIST with their set times, not just the primary artist. If you see "ROS" followed by a list like "11pm-12am ARTIST A, 12am-1am ARTIST B", create a separate set object for BOTH artists. This complete lineup is CRITICAL for tour management!
+- **KEEP IT CONCISE**: Avoid repeating the same information across multiple set objects. Venue info goes in the top-level "venue" field, NOT in each set. Only include set-specific fields (artist_name, times, etc.) in each set object.
 - Extract the SPECIFIC performance date and time (set_date, start_time, end_time) - NOT just the overall event dates
 - Convert ALL times to 24-hour format (HH:MM) - e.g., "8:15pm" becomes "20:15", "1:30am" becomes "01:30", "4:00am" becomes "04:00"
 - Extract timezone (use IANA format like "America/Los_Angeles" or abbreviation like "PDT/PST") - this is CRITICAL for tour management

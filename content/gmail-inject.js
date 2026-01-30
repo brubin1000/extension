@@ -44,30 +44,32 @@ function injectStyles() {
     /* Button - Icon only with morphing animation */
     #atms-btn {
       display: inline-flex;
+      align-items: center;
       margin-left: 8px;
       position: relative;
+      vertical-align: middle;
     }
     
     .atms-trigger {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       padding: 0;
       background: linear-gradient(135deg, #22c7a8 0%, #1ba896 100%);
       color: white;
       border: none;
-      border-radius: 12px;
+      border-radius: 11px;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
       box-shadow: 0 2px 8px rgba(34, 199, 168, 0.3);
     }
-    
+
     .atms-trigger:hover {
       transform: scale(1.1) rotate(-3deg);
       box-shadow: 0 6px 20px rgba(34, 199, 168, 0.5);
-      border-radius: 14px;
+      border-radius: 13px;
     }
     
     .atms-trigger:active {
@@ -681,7 +683,7 @@ function createButton() {
   button.id = 'atms-btn';
   button.innerHTML = `
     <button class="atms-trigger" title="Add to ATMS">
-      <svg class="atms-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <svg class="atms-icon" width="22" height="22" viewBox="0 0 24 24" fill="none">
         <!-- Calendar base -->
         <rect class="cal-body" x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
         <line class="cal-hook1" x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1145,15 +1147,31 @@ function setupDropdownEvents() {
   currentDropdown.querySelector('#btn-create')?.addEventListener('click', handleCreate);
 
   // Add custom attendee button
-  currentDropdown.querySelector('#add-attendee-btn')?.addEventListener('click', handleAddCustomAttendee);
+  const addBtn = currentDropdown.querySelector('#add-attendee-btn');
+  if (addBtn) {
+    console.log('[ATMS] Attendee button found, attaching event listener');
+    addBtn.addEventListener('click', () => {
+      console.log('[ATMS] Add attendee button clicked!');
+      handleAddCustomAttendee();
+    });
+  } else {
+    console.warn('[ATMS] Attendee button not found!');
+  }
 
   // Allow Enter key in attendee input
-  currentDropdown.querySelector('#add-attendee-input')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddCustomAttendee();
-    }
-  });
+  const addInput = currentDropdown.querySelector('#add-attendee-input');
+  if (addInput) {
+    console.log('[ATMS] Attendee input found, attaching enter key listener');
+    addInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        console.log('[ATMS] Enter pressed in attendee input');
+        handleAddCustomAttendee();
+      }
+    });
+  } else {
+    console.warn('[ATMS] Attendee input not found!');
+  }
 
   // Success/Error buttons
   currentDropdown.querySelector('#btn-view-calendar')?.addEventListener('click', () => {
@@ -1354,28 +1372,173 @@ function populateReviewForm() {
   // Populate core fields - support both new and old schema
   currentDropdown.querySelector('#input-title').value = details.event_name || details.title || '';
 
-  // Extract date from specific set date (PRIORITY) or fall back to event start date
-  let dateValue = details.date || details.dates?.start_date || '';
-  if (details.stages && details.stages.length > 0 && details.stages[0].sets && details.stages[0].sets.length > 0) {
-    const setDate = details.stages[0].sets[0].set_date;
-    if (setDate) {
-      dateValue = setDate;
-      console.log(`[ATMS] Using specific set date: ${setDate}`);
+  // Find the user's set using intelligent context-based detection
+  let userSet = null;
+  if (details.stages && details.stages.length > 0) {
+    const participants = eventState.emailData?.participants || [];
+    const emailBody = (eventState.emailData?.body || '').toLowerCase();
+    const senderEmail = (eventState.emailData?.senderEmail || '').toLowerCase();
+
+    // Build list of recipient names with priority order
+    // Priority 1: Primary "to" recipients
+    // Priority 2: Other participants
+    const primaryRecipients = participants.filter(p => p.role === 'to');
+    const otherParticipants = participants.filter(p => p.role !== 'to');
+    const orderedRecipients = [...primaryRecipients, ...otherParticipants];
+
+    // Extract name parts (first name, last name) for matching
+    const getNameParts = (name) => {
+      if (!name) return [];
+      return name.toLowerCase()
+        .replace(/[^\w\s]/g, '') // Remove special chars
+        .split(/\s+/)
+        .filter(part => part.length > 2); // Ignore short words like "DJ", "MC"
+    };
+
+    // Context clue: Check if email body mentions specific artist (e.g., "Your set time", "You're performing")
+    let contextArtist = null;
+    const contextPhrases = [
+      /your\s+set\s+(?:time|is|will|be)?/i,
+      /you(?:'re|\s+are)\s+(?:performing|playing|scheduled)/i,
+      /(?:for|to)\s+you[:\s]/i
+    ];
+
+    const hasContextClue = contextPhrases.some(phrase => phrase.test(emailBody));
+    if (hasContextClue) {
+      console.log('[ATMS] Detected context clue indicating email is addressed to the artist');
     }
+
+    // Determine if sender is a venue/promoter (not the artist themselves)
+    const isFromPromoter = senderEmail.includes('insomniac') ||
+                           senderEmail.includes('promoter') ||
+                           senderEmail.includes('venue') ||
+                           senderEmail.includes('booking') ||
+                           senderEmail.includes('events');
+
+    if (isFromPromoter) {
+      console.log('[ATMS] Email from promoter/venue - recipient is likely the artist/agent');
+    }
+
+    // Search all stages for a matching artist
+    let bestMatch = null;
+    let bestMatchScore = 0;
+
+    for (const stage of details.stages) {
+      if (!stage.sets || stage.sets.length === 0) continue;
+
+      for (const set of stage.sets) {
+        const artistNameLower = (set.artist_name || '').toLowerCase();
+        const artistParts = getNameParts(set.artist_name);
+
+        // Try to match against each recipient (in priority order)
+        for (let i = 0; i < orderedRecipients.length; i++) {
+          const recipient = orderedRecipients[i];
+          const recipientParts = getNameParts(recipient.name);
+
+          if (recipientParts.length === 0) continue;
+
+          // Calculate match score
+          let matchScore = 0;
+
+          // Check if any significant part of recipient's name appears in artist name
+          for (const recipientPart of recipientParts) {
+            if (artistNameLower.includes(recipientPart)) {
+              matchScore += 10;
+
+              // Bonus points for exact word match (not just substring)
+              if (artistParts.includes(recipientPart)) {
+                matchScore += 5;
+              }
+            }
+          }
+
+          // Check reverse: artist name parts in recipient name
+          const recipientNameLower = (recipient.name || '').toLowerCase();
+          for (const artistPart of artistParts) {
+            if (recipientNameLower.includes(artistPart)) {
+              matchScore += 8;
+            }
+          }
+
+          // Priority bonuses
+          if (recipient.role === 'to') {
+            matchScore += 5; // Prioritize primary recipient
+          }
+
+          if (hasContextClue && i === 0) {
+            matchScore += 10; // Big bonus if context suggests this is "you"
+          }
+
+          if (isFromPromoter && i === 0) {
+            matchScore += 5; // Bonus if from promoter to primary recipient
+          }
+
+          // Update best match
+          if (matchScore > bestMatchScore) {
+            bestMatchScore = matchScore;
+            bestMatch = {
+              set: set,
+              recipient: recipient.name,
+              score: matchScore,
+              method: hasContextClue ? 'context+name' : 'name'
+            };
+          }
+        }
+      }
+    }
+
+    if (bestMatch && bestMatchScore >= 10) {
+      userSet = bestMatch.set;
+      console.log(`[ATMS] Found user's set: ${userSet.artist_name} (matched ${bestMatch.recipient}, score: ${bestMatch.score}, method: ${bestMatch.method})`);
+    } else {
+      // Fallback: use first set if no strong match found
+      if (details.stages[0]?.sets && details.stages[0].sets.length > 0) {
+        userSet = details.stages[0].sets[0];
+        console.log(`[ATMS] No strong match found (best score: ${bestMatchScore}), using first set: ${userSet.artist_name}`);
+      }
+    }
+  }
+
+  // Extract date from user's specific set date (PRIORITY) or fall back to event start date
+  let dateValue = details.date || details.dates?.start_date || '';
+  if (userSet && userSet.set_date) {
+    dateValue = userSet.set_date;
+    console.log(`[ATMS] Using specific set date: ${dateValue}`);
   }
   currentDropdown.querySelector('#input-date').value = dateValue;
 
-  // Extract time from specific set time (PRIORITY) or fall back to old time field
+  // Extract time from user's specific set time (PRIORITY) or fall back to old time field
   let timeValue = details.time || '10:00';
-  if (details.stages && details.stages.length > 0 && details.stages[0].sets && details.stages[0].sets.length > 0) {
-    const setStartTime = details.stages[0].sets[0].start_time;
-    const setEndTime = details.stages[0].sets[0].end_time;
-    if (setStartTime) {
-      timeValue = setStartTime;
-      console.log(`[ATMS] Using specific set time: ${setStartTime}${setEndTime ? ` - ${setEndTime}` : ''}`);
+  let durationMinutes = 60; // Default 1 hour
+
+  if (userSet && userSet.start_time) {
+    timeValue = userSet.start_time;
+    console.log(`[ATMS] Using specific set time: ${timeValue}${userSet.end_time ? ` - ${userSet.end_time}` : ''}`);
+
+    // Calculate duration from start_time to end_time
+    if (userSet.end_time) {
+      const [startHour, startMin] = userSet.start_time.split(':').map(Number);
+      const [endHour, endMin] = userSet.end_time.split(':').map(Number);
+
+      let startMinutes = startHour * 60 + startMin;
+      let endMinutes = endHour * 60 + endMin;
+
+      // Handle sets that cross midnight (e.g., 23:00 to 01:00)
+      if (endMinutes < startMinutes) {
+        endMinutes += 24 * 60;
+      }
+
+      durationMinutes = endMinutes - startMinutes;
+      console.log(`[ATMS] Calculated duration: ${durationMinutes} minutes (${userSet.start_time} - ${userSet.end_time})`);
     }
   }
+
   currentDropdown.querySelector('#input-time').value = timeValue;
+
+  // Store duration in event details for later use
+  if (!details.duration) {
+    details.duration = durationMinutes;
+  }
 
   // Location from venue or old location field
   let locationValue = details.location || '';
@@ -1752,6 +1915,14 @@ function createStagesSection(stages) {
     stageHeader.style.cssText = 'font-weight: 600; color: #22c7a8; margin-top: 12px; margin-bottom: 8px;';
     container.appendChild(stageHeader);
 
+    // Stage-level technical notes
+    if (stage.technical_notes) {
+      const techDiv = document.createElement('div');
+      techDiv.style.cssText = 'color: #eff2f5; font-size: 12px; margin-bottom: 12px; background: #0d0f14; padding: 8px; border-radius: 4px; border-left: 3px solid #22c7a8;';
+      techDiv.innerHTML = `<strong>Tech:</strong> ${escapeHtml(stage.technical_notes)}`;
+      container.appendChild(techDiv);
+    }
+
     // Sets for this stage
     if (stage.sets && stage.sets.length > 0) {
       stage.sets.forEach((set, setIdx) => {
@@ -1771,10 +1942,6 @@ function createStagesSection(stages) {
 
         if (set.crew_list) {
           setHtml += `<div style="color: #808898; font-size: 12px; margin-top: 6px;"><strong>Crew:</strong> ${escapeHtml(set.crew_list)}</div>`;
-        }
-
-        if (set.technical_notes) {
-          setHtml += `<div style="color: #eff2f5; font-size: 12px; margin-top: 6px; background: #0d0f14; padding: 8px; border-radius: 4px;"><strong>Tech:</strong> ${escapeHtml(set.technical_notes)}</div>`;
         }
 
         if (set.hospitality_notes) {
@@ -2293,7 +2460,7 @@ function createFloatingButton() {
   button.id = 'atms-btn-float';
   button.innerHTML = `
     <button class="atms-trigger-float" title="Add to ATMS">
-      <svg class="atms-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <svg class="atms-icon" width="28" height="28" viewBox="0 0 24 24" fill="none">
         <rect class="cal-body" x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
         <line class="cal-hook1" x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         <line class="cal-hook2" x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
