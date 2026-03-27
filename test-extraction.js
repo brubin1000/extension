@@ -22,7 +22,7 @@ const edcEmail = fs.readFileSync(
 );
 
 // Gemini API configuration
-const GEMINI_API_KEY = 'AIzaSyBBGEOs-z3mQpQuSk6aF9Gh_kMoEBJfGxA'; // From .env
+const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE'; // From .env
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 /**

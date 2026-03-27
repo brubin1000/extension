@@ -5,7 +5,7 @@
  */
 
 // Gemini API Key - get from https://aistudio.google.com/app/apikey
-export const GEMINI_API_KEY = 'AIzaSyBBGEOs-z3mQpQuSk6aF9Gh_kMoEBJfGxA';
+export const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE';
 
 // Supabase Configuration
 export const SUPABASE_URL = 'https://qkbxjzdjibwztchvsaay.supabase.co';
