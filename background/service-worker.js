@@ -1268,14 +1268,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'GET_ARTIST_PROFILES':
           try {
-            const auth = await ensureAuthenticated();
-            if (!auth.success) {
-              sendResponse({ success: false, error: 'Not authenticated', profiles: [] });
-              break;
+            // Try to get authenticated user, but allow local fallback
+            let userId = 'local_user';
+            let userOrgIds = [];
+
+            try {
+              const auth = await ensureAuthenticated();
+              if (auth.success) {
+                userId = await getGoogleUserId();
+                userOrgIds = await getUserOrgIds(userId);
+              }
+            } catch (authErr) {
+              info('Using local user mode for profiles (auth unavailable)');
             }
 
-            const userId = await getGoogleUserId();
-            const userOrgIds = await getUserOrgIds(userId);
             const orgId = message.orgId; // Optional filter by org
 
             let profiles;
@@ -1304,13 +1310,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'CREATE_PROFILE':
           try {
-            const auth = await ensureAuthenticated();
-            if (!auth.success) {
-              sendResponse({ success: false, error: 'Not authenticated' });
-              break;
+            // Try to get authenticated user, but allow local fallback
+            let userId = 'local_user';
+
+            try {
+              const auth = await ensureAuthenticated();
+              if (auth.success) {
+                userId = await getGoogleUserId();
+              }
+            } catch (authErr) {
+              info('Creating profile in local user mode (auth unavailable)');
             }
 
-            const userId = await getGoogleUserId();
             const profileData = { ...message.profileData, createdBy: userId };
             const newProfile = await createProfile(profileData);
 
@@ -1379,13 +1390,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'GET_USER_ORGANIZATIONS':
           try {
-            const auth = await ensureAuthenticated();
-            if (!auth.success) {
-              sendResponse({ success: false, error: 'Not authenticated', organizations: [] });
-              break;
+            // Try to get authenticated user, but allow local fallback
+            let userId = 'local_user';
+
+            try {
+              const auth = await ensureAuthenticated();
+              if (auth.success) {
+                userId = await getGoogleUserId();
+              }
+            } catch (authErr) {
+              info('Using local user mode for organizations (auth unavailable)');
             }
 
-            const userId = await getGoogleUserId();
             const organizations = await getUserOrganizations(userId);
             sendResponse({ success: true, organizations });
           } catch (err) {

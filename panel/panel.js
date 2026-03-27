@@ -107,10 +107,15 @@ function setupDrawers() {
 }
 
 function openDrawer(name) {
+  console.log('[ATMS] openDrawer called:', name);
   const drawer = elements.drawers[name];
+  console.log('[ATMS] drawer element:', drawer);
   if (drawer) {
     drawer.classList.add('open');
     elements.backdrop?.classList.remove('hidden');
+    console.log('[ATMS] Drawer opened:', name);
+  } else {
+    console.error('[ATMS] Drawer not found:', name);
   }
 }
 
@@ -613,6 +618,7 @@ function setupProfileDrawers() {
 
   // Add new profile button
   const openNewProfileEditor = () => {
+    console.log('[ATMS] openNewProfileEditor called');
     state.editingProfile = null;
     clearProfileForm();
     populateOrgDropdown();
@@ -620,8 +626,11 @@ function setupProfileDrawers() {
     document.getElementById('btn-delete-profile').style.display = 'none';
     openDrawer('profileEditor');
   };
-  document.getElementById('btn-add-profile')?.addEventListener('click', openNewProfileEditor);
-  document.getElementById('btn-add-profile-empty')?.addEventListener('click', openNewProfileEditor);
+  const addBtn = document.getElementById('btn-add-profile');
+  const addBtnEmpty = document.getElementById('btn-add-profile-empty');
+  console.log('[ATMS] Add profile buttons:', { addBtn, addBtnEmpty });
+  addBtn?.addEventListener('click', openNewProfileEditor);
+  addBtnEmpty?.addEventListener('click', openNewProfileEditor);
 
   // Profile detail drawer
   document.getElementById('back-profile-detail')?.addEventListener('click', () => closeDrawer('profileDetail'));
@@ -688,18 +697,22 @@ async function loadOrganizations() {
 
 // Load artist profiles
 async function loadArtistProfiles() {
+  console.log('[ATMS] loadArtistProfiles called');
   try {
     showProfilesLoading(true);
 
     const userId = state.userProfile?.id || state.userProfile?.email;
+    console.log('[ATMS] Loading profiles for userId:', userId);
     const response = await chrome.runtime.sendMessage({
       type: 'GET_ARTIST_PROFILES',
       userId,
       orgId: state.activeOrgId
     });
 
+    console.log('[ATMS] Profiles response:', response);
     if (response?.success) {
       state.artistProfiles = response.profiles || [];
+      console.log('[ATMS] Loaded profiles:', state.artistProfiles.length);
       renderProfiles();
     } else {
       console.error('[ATMS] Failed to load profiles:', response?.error);
@@ -1175,9 +1188,11 @@ function addContactRow(e, data = {}) {
 
 // Handle save profile (SIMPLIFIED)
 async function handleSaveProfile(e) {
+  console.log('[ATMS] handleSaveProfile called');
   e.preventDefault();
 
   const artistName = document.getElementById('edit-artist-name')?.value?.trim();
+  console.log('[ATMS] Artist name:', artistName);
   if (!artistName) {
     showToast('Artist name is required', 'error');
     return;
@@ -1241,11 +1256,13 @@ async function handleSaveProfile(e) {
       });
     }
 
+    console.log('[ATMS] Save profile response:', response);
     if (response?.success) {
       showToast(state.editingProfile ? 'Profile updated!' : 'Profile created!');
       closeDrawer('profileEditor');
       await loadArtistProfiles();
     } else {
+      console.error('[ATMS] Save profile failed:', response?.error);
       showToast(response?.error || 'Failed to save profile', 'error');
     }
   } catch (err) {
